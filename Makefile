@@ -58,8 +58,8 @@ data : $(BIN2C)
 	$(BIN2C) static/EGADICT.KDR static/EGADICT EGAdict
 	$(BIN2C) static/EGAHEAD.KDR static/EGAHEAD EGAhead
 	$(BIN2C) static/GAMETEXT.KDR static/GAMETEXT gametext
-	$(BIN2C) static/extr-1.13/MAPDICT.KDR static/MAPDICT mapdict
-	$(BIN2C) static/extr-1.13/MAPHEAD.KDR static/MAPHEAD maphead
+	$(BIN2C) static/MAPDICT.KDR static/MAPDICT mapdict
+	$(BIN2C) static/MAPHEAD.KDR static/MAPHEAD maphead
 	$(BIN2C) static/STORY.KDR static/STORY story
 
 $(KDREAMS) : data $(OBJ) dummy
