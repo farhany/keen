@@ -62,12 +62,16 @@ data : $(BIN2C)
 	$(BIN2C) static/extr-1.13/MAPHEAD.KDR static/MAPHEAD maphead
 	$(BIN2C) static/STORY.KDR static/STORY story
 
-$(KDREAMS) : $(OBJ) dummy
+$(KDREAMS) : data $(OBJ) dummy
 	gcc -o KDREAMS $(OBJ) $(LFLAGS)
 	cd game && lldb ../KDREAMS
 
 clean : dummy
 	rm *.o
+	rm opl/*.o
+	rm static/*.c
+	rm static/*.h
+	rm static/*.o
 
 %.o : %.c
 	gcc $(CFLAGS) -c $< -o $@
