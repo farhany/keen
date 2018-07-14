@@ -4,6 +4,20 @@ This repository contains the source for Commander Keen in Keen Dreams.  It is re
 
 The release of the source code does not affect the licensing of the game data files, which you must still legally acquire.  This includes the static data included in this repository for your convenience.  However, you are permitted to link and distribute that data for the purposes of compatibility with the original game.
 
+## Compiling
+
+make [enter]
+
+The code was converted from the original code targeting Borland C++ 2.0, to modern C++ compilers.  The code has been demonstrated to compile and work on Windows using Visual Studio 2013, Linux using Ubuntu and MacOS High Sierra.
+
+There is some data that must be compiled into the binary.  This data is located in the static directory.  The makefile provided will automatically take care of this.  Just run 'make data' or 'make' [enter].
+
+## Running
+
+Make sure to get a copy of the game somewhere.  I've tested it with the 1.13 shareware version of the game and it runs fine.  Extract the game files to a folder named 'game'.  The makefile will automatically try to run the generated executable, and look for data files inside the 'game' folder, so be sure to use this name.  Otherwise, copy the compile executable to the data folder and run it from there.
+
+## Credits
+
 This release was made possible by a crowdfunding effort.  It is brought to you by Javier M. Chavez and Chuck Naaden with additional support from:
 
 * Dave Allen
@@ -18,14 +32,6 @@ This release was made possible by a crowdfunding effort.  It is brought to you b
 * Ian Williams
 * Steven Zakulec
 * et al
-
-## Compiling
-
-The code is designed for Borland C++ 2.0, but all revisions compiled fine under 3.1 at the time of release.
-
-There is some data that must be compiled into the binary.  This data is located in the static directory.  To prepare the source for building, make sure Borland C++ is in your *PATH* and then run `make.bat`.
-
-You may now go to the root directory and type `bc` to open the project and build.  You may need to configure your directories in Borland for it to compile properly.
 
 ### EGA/CGA Version
 
