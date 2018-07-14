@@ -66,9 +66,9 @@ extern	word		WindowX,WindowY,// Current location of window
 
 extern	void	US_Startup(void),
 				US_Setup(void),
-				US_Shutdown(void),
-				US_InitRndT(boolean randomize),
-				US_SetLoadSaveHooks(boolean (*load)(int),
+				US_Shutdown(void);
+extern	void	US_InitRndT(boolean randomize);
+extern	void	US_SetLoadSaveHooks(boolean (*load)(int),
 									boolean (*save)(int),
 									void (*reset)(void)),
 				US_TextScreen(void),
@@ -87,16 +87,16 @@ extern	void	US_Startup(void),
 				US_CPrintLine(char *s),
 				US_Print(char *s),
 				US_PrintUnsigned(longword n),
-				US_PrintSigned(long n),
+				US_PrintSigned(int32_t n),
 				US_StartCursor(void),
 				US_ShutCursor(void),
 				US_ControlPanel(void),
-				US_CheckHighScore(long score,word other),
-				US_DisplayHighScores(int which);
+				US_CheckHighScore(int32_t score,word other),
+				US_DisplayHighScores(short which);
 extern	boolean	US_UpdateCursor(void),
-				US_LineInput(int x,int y,char *buf,char *def,boolean escok,
-								int maxchars,int maxwidth);
-extern	int		US_CheckParm(char *parm,char **strings),
-				US_RndT(void);
+				US_LineInput(short x,short y,char *buf,char *def,boolean escok,
+								short maxchars,short maxwidth);
+extern	int		US_CheckParm(char *parm,char **strings);
+extern	short	US_RndT(void);
 
 #endif

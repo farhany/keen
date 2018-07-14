@@ -44,7 +44,7 @@ typedef void _seg * memptr;
 
 typedef struct
 {
-	long	nearheap,farheap,EMSmem,XMSmem,mainmem;
+	int32_t	nearheap,farheap,EMSmem,XMSmem,mainmem;
 } mminfotype;
 
 //==========================================================================
@@ -59,20 +59,26 @@ extern	void		(* aftersort) (void);
 //==========================================================================
 
 void MM_Startup (void);
-void MM_Shutdown (void);
-void MM_MapEMS (void);
+static void MM_Shutdown (void) { }
+static void MM_MapEMS (void) { }
 
-void MM_GetPtr (memptr *baseptr,unsigned long size);
-void MM_FreePtr (memptr *baseptr);
+static void MM_GetPtr (memptr *baseptr,uint32_t size)
+{
+	*baseptr = malloc(size);
+}
+static void MM_FreePtr (memptr *baseptr)
+{
+	free(*baseptr);
+	*baseptr = 0;
+}
 
-void MM_SetPurge (memptr *baseptr, int purge);
-void MM_SetLock (memptr *baseptr, boolean locked);
-void MM_SortMem (void);
+static void MM_SetPurge (memptr *baseptr, int purge) { }
+static void MM_SetLock (memptr *baseptr, boolean locked) { }
+static void MM_SortMem (void) { }
 
-void MM_ShowMemory (void);
+static void MM_ShowMemory (void) { }
 
-long MM_UnusedMemory (void);
-long MM_TotalFree (void);
-
+static int32_t MM_UnusedMemory (void) { return 1024*640; }
+static int32_t MM_TotalFree (void) { return 1024*640; }
 
 #endif

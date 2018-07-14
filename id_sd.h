@@ -45,11 +45,16 @@ typedef	enum	{
 					smm_Off,smm_AdLib
 				}	SMMode;
 
+#pragma pack(push)
+#pragma pack(2)
+
 typedef	struct
 		{
 			longword	length;
 			word		priority;
 		} SoundCommon;
+
+#pragma pack(pop)
 
 //	PC Sound stuff
 #define	pcTimer		0x42
@@ -58,11 +63,16 @@ typedef	struct
 
 #define	pcSpkBits	3
 
+#pragma pack(push)
+#pragma pack(2)
+
 typedef	struct
 		{
 			SoundCommon	common;
 			byte		data[1];
 		} PCSound;
+
+#pragma pack(pop)
 
 // 	Registers for the Sound Blaster card - needs to be offset by n0
 #define	sbReset		0x206
@@ -72,6 +82,9 @@ typedef	struct
 #define	sbWriteStat	0x20c
 #define	sbDataAvail	0x20e
 
+#pragma pack(push)
+#pragma pack(2)
+
 typedef	struct
 		{
 			SoundCommon	common;
@@ -80,6 +93,8 @@ typedef	struct
 						reference,
 						data[1];
 		} SampledSound;
+
+#pragma pack(pop)
 
 // 	Registers for the AdLib card
 // Operator stuff
@@ -94,6 +109,9 @@ typedef	struct
 #define	alFeedCon	0xc0
 // Global stuff
 #define	alEffects	0xbd
+
+#pragma pack(push)
+#pragma pack(2)
 
 typedef	struct
 		{
@@ -114,6 +132,8 @@ typedef	struct
 						data[1];
 		} AdLibSound;
 
+#pragma pack(pop)
+
 //
 //	Sequencing stuff
 //
@@ -129,6 +149,9 @@ typedef	struct
 #define	sev_PercOn		6	// Turns a percussive note on
 #define	sev_PercOff		7	// Turns a percussive note off
 #define	sev_SeqEnd		-1	// Terminates a sequence
+
+#pragma pack(push)
+#pragma pack(2)
 
 typedef	struct
 		{
@@ -148,6 +171,8 @@ typedef	struct
 			longword	nextevent;
 		} ActiveTrack;
 
+#pragma pack(pop)
+
 #define	sqmode_Normal		0
 #define	sqmode_FadeIn		1
 #define	sqmode_FadeOut		2
@@ -161,25 +186,25 @@ extern	boolean		SoundSourcePresent,SoundBlasterPresent,AdLibPresent,
 					NeedsDigitized,NeedsMusic;	// For Caching Mgr
 extern	SDMode		SoundMode;
 extern	SMMode		MusicMode;
-extern	longword	TimeCount;					// Global time in ticks
+extern	volatile longword	TimeCount;					// Global time in ticks
 
 extern	boolean		ssIsTandy;					// For config file
 extern	word		ssPort;
 
 // Function prototypes
-extern	void	SD_Startup(void),
-				SD_Shutdown(void),
-				SD_Default(boolean gotit,SDMode sd,SMMode sm),
-				SD_PlaySound(word sound),
-				SD_StopSound(void),
-				SD_WaitSoundDone(void),
-				SD_StartMusic(Ptr music),	// DEBUG - this shouldn't be a Ptr
-				SD_FadeOutMusic(void),
-				SD_SetUserHook(void (*hook)(void));
-extern	boolean	SD_MusicPlaying(void),
-				SD_SetSoundMode(SDMode mode),
-				SD_SetMusicMode(SMMode mode);
-extern	word	SD_SoundPlaying(void);
+void	SD_Startup(void);
+void	SD_Shutdown(void);
+void	SD_Default(boolean gotit,SDMode sd,SMMode sm);
+void	SD_PlaySound(word sound);
+void	SD_StopSound(void);
+void	SD_WaitSoundDone(void);
+void	SD_StartMusic(Ptr music); // DEBUG - this shouldn't be a Ptr
+void	SD_FadeOutMusic(void);
+void	SD_SetUserHook(void (*hook)(void));
+boolean	SD_MusicPlaying(void);
+boolean	SD_SetSoundMode(SDMode mode);
+boolean	SD_SetMusicMode(SMMode mode);
+word	SD_SoundPlaying(void);
 
 #ifdef	_MUSE_	// MUSE Goes directly to the lower level routines
 extern	void	SDL_PCPlaySound(PCSound far *sound),

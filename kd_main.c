@@ -27,10 +27,11 @@
 =============================================================================
 */
 
-#include "mem.h"
+#include <SDL/SDL.h> // crashes on Mac if we don't include this file here..
 #include "string.h"
 
 #include "KD_DEF.H"
+#include "syscode.h"
 #pragma hdrstop
 
 /*
@@ -51,7 +52,12 @@
 
 char		str[80],str2[20];
 boolean		singlestep,jumpcheat,godmode,tedlevel;
-unsigned	tedlevelnum;
+word		tedlevelnum;
+int			tickrate = 70;
+boolean		fullscreen = false;
+boolean		fixedAspectRatio = true;
+boolean		useOpengl = true;
+int			displaySx,displaySy;
 
 /*
 =============================================================================
@@ -63,11 +69,10 @@ unsigned	tedlevelnum;
 
 void	DebugMemory (void);
 void	TestSprites(void);
-int		DebugKeys (void);
+short	DebugKeys (void);
 void	ShutdownId (void);
 void	Quit (char *error);
 void	InitGame (void);
-void	main (void);
 
 //===========================================================================
 
@@ -231,7 +236,7 @@ void TestSprites(void)
 =
 ================
 */
-int DebugKeys (void)
+short DebugKeys (void)
 {
 	boolean esc;
 	int level;
@@ -374,7 +379,7 @@ void Quit (char *error)
   ShutdownId ();
   if (error && *error)
   {
-	clrscr();
+	//clrscr(); // mstodo : clear screen
 	puts(error);
 	puts("\n");
 	exit(1);
@@ -400,7 +405,7 @@ void Quit (char *error)
 
 void InitGame (void)
 {
-	int i;
+	short i;
 
 	MM_Startup ();
 
@@ -416,23 +421,22 @@ void InitGame (void)
 #if GRMODE == EGAGR
 	if (mminfo.mainmem < 335l*1024)
 	{
-#pragma	warn	-pro
-#pragma	warn	-nod
-		clrscr();			// we can't include CONIO because of a name conflict
-#pragma	warn	+nod
-#pragma	warn	+pro
+		// mstodo : clear screen
+		//clrscr();			// we can't include CONIO because of a name conflict
 		puts ("There is not enough memory available to play the game reliably.  You can");
 		puts ("play anyway, but an out of memory condition will eventually pop up.  The");
 		puts ("correct solution is to unload some TSRs or rename your CONFIG.SYS and");
 		puts ("AUTOEXEC.BAT to free up more memory.\n");
 		puts ("Do you want to (Q)uit, or (C)ontinue?");
-		i = bioskey (0);
-		if ( (i>>8) != sc_C)
+		i = getc (stdin); // mstodo : waits for enter..
+		if ( i != 'c' )
 			Quit ("");
 	}
 #endif
 
-	US_TextScreen();
+	//US_TextScreen();
+
+	SYS_Init (tickrate, displaySx, displaySy, fullscreen, fixedAspectRatio, useOpengl);
 
 	VW_Startup ();
 	RF_Startup ();
@@ -440,7 +444,7 @@ void InitGame (void)
 	SD_Startup ();
 	US_Startup ();
 
-//	US_UpdateTextScreen();
+	//US_UpdateTextScreen();
 
 	CA_Startup ();
 	US_Setup ();
@@ -471,7 +475,7 @@ void InitGame (void)
 
 	fontcolor = WHITE;
 
-	US_FinishTextScreen();
+	//US_FinishTextScreen();
 
 	VW_SetScreenMode (GRMODE);
 	VW_ClearVideo (BLACK);
@@ -489,13 +493,28 @@ void InitGame (void)
 ==========================
 */
 
-void main (void)
-{
-	short i;
+int _argc;
+char ** _argv;
 
-	if (stricmp(_argv[1], "/VER") == 0)
+int main (int argc, char ** argv)
+{
+	char * ParmStrings[] = {
+		"NOMAPDICT", "MAPDICT", "MAPHEAD", "MAPDATA",
+		"NOEGADICT", "EGADICT", "EGAHEAD", "EGADATA",
+		"TICKRATE", "TICKFPS",
+		"FULLSCREEN", "DISPLAY",
+		"STRETCH", "NOGL",
+		NULL
+	};
+	int i;
+	boolean help = false;
+
+	_argc = argc;
+	_argv = argv;
+	
+	if (_argc >= 2 && _stricmp(_argv[1], "/VER") == 0)
 	{
-		printf("\nKeen Dreams version 1.93  (Rev 1)\n");
+		printf("\nKeen Dreams version 1.93 (Rev 1)\n");
 		printf("developed for use with 100%% IBM compatibles\n");
 		printf("that have 640K memory, DOS version 3.3 or later,\n");
 		printf("and an EGA or VGA display adapter.\n");
@@ -504,30 +523,96 @@ void main (void)
 		exit(0);
 	}
 
-	if (stricmp(_argv[1], "/?") == 0)
+	if (_argc >= 2 && _stricmp(_argv[1], "/?") == 0)
+		help = true;
+
 	{
 		printf("\nKeen Dreams version 1.93\n");
 		printf("Copyright 1991-1993 Softdisk Publishing.\n\n");
-		printf("Commander Keen is a trademark of Id Software.\n");
 		printf("Type KDREAMS from the DOS prompt to run.\n\n");
-		printf("KDREAMS /COMP for SVGA compatibility mode\n");
-		printf("KDREAMS /NODR stops program hang with the drive still on\n");
-		printf("KDREAMS /NOAL disables AdLib and Sound Blaster detection\n");
-		printf("KDREAMS /NOSB disables Sound Blaster detection\n");
+		//printf("KDREAMS /COMP for SVGA compatibility mode\n");
+		//printf("KDREAMS /NODR stops program hang with the drive still on\n");
+		//printf("KDREAMS /NOAL disables AdLib and Sound Blaster detection\n");
+		//printf("KDREAMS /NOSB disables Sound Blaster detection\n");
 		printf("KDREAMS /NOJOYS ignores joystick\n");
 		printf("KDREAMS /NOMOUSE ignores mouse\n");
-		printf("KDREAMS /HIDDENCARD overrides video card detection\n");
+		//printf("KDREAMS /HIDDENCARD overrides video card detection\n");
+		printf("KDREAMS /%s use zero-compression EGADICT\n", ParmStrings[4]);
+		printf("KDREAMS /%s <file> override EGADICT. Default is %s\n", ParmStrings[5], fn_egadict);
+		printf("KDREAMS /%s <file> override EGAHEAD. Default is %s\n", ParmStrings[6], fn_egahead);
+		printf("KDREAMS /%s <file> override EGADATA. Default is %s\n", ParmStrings[7], fn_egadata);
+		printf("KDREAMS /%s use zero-compression MAPDICT\n", ParmStrings[0]);
+		printf("KDREAMS /%s <file> override MAPDICT. Default is %s\n", ParmStrings[1], fn_mapdict);
+		printf("KDREAMS /%s <file> override MAPHEAD. Default is %s\n", ParmStrings[2], fn_maphead);
+		printf("KDREAMS /%s <file> override MAPDATA. Default is %s\n", ParmStrings[3], fn_mapdata);
+		printf("KDREAMS /%s sets the logic tick rate. Default is %d\n", ParmStrings[8], tickrate);
+		printf("KDREAMS /%s sync logic tick rate to FPS. Increases smoothness.\n", ParmStrings[9]);
+		printf("KDREAMS /%s use a fullscreen video mode.\n", ParmStrings[10]);
+		printf("KDREAMS /%s <width> <height> sets display resolution.\n", ParmStrings[11]);
+		printf("KDREAMS /%s stretch image. don't maintain original 4:3 aspect ratio.\n", ParmStrings[12]);
+		printf("KDREAMS /%s use software renderer instead of OpenGL.\n", ParmStrings[13]);
 		printf("KDREAMS /VER  for version and compatibility information\n");
 		printf("KDREAMS /? for this help information\n");
-		exit(0);
+		if (help)
+			exit(0);
 	}
 
-	textcolor(7);
-	textbackground(0);
+	for (i = 1; i < _argc; ++i)
+	{
+		int p = US_CheckParm(_argv[i], ParmStrings);
+
+		// map
+
+		if (p == 0)
+			fn_mapdict = (char*)-1;
+		if (p == 1)
+			fn_mapdict = _argv[++i];
+		if (p == 2)
+			fn_maphead = _argv[++i];
+		if (p == 3)
+			fn_mapdata = _argv[++i];
+
+		// ega
+
+		if (p == 4)
+			fn_egadict = (char*)-1;
+		if (p == 5)
+			fn_egadict = _argv[++i];
+		if (p == 6)
+			fn_egahead = _argv[++i];
+		if (p == 7)
+			fn_egadata = _argv[++i];
+
+		// tickrate
+
+		if (p == 8)
+			tickrate = atoi(_argv[++i]);
+		if (p == 9)
+			tickfps = true;
+
+		// graphics
+
+		if (p == 10)
+			fullscreen = true;
+		if (p == 11)
+		{
+			displaySx = atoi(_argv[++i]);
+			displaySy = atoi(_argv[++i]);
+		}
+		if (p == 12)
+			fixedAspectRatio = false;
+		if (p == 13)
+			useOpengl = false;
+	}
+
+	//textcolor(7); // mstodo
+	//textbackground(0);
 
 	InitGame();
 
 	DemoLoop();					// DemoLoop calls Quit when everything is done
 	Quit("Demo loop exited???");
+	
+	return -1;
 }
 

@@ -46,13 +46,15 @@
 // DEBUG - handle LPT3 for Sound Source
 
 #include "ID_HEADS.H"
+#include "static/CONTEXT.h"
+#include "static/GAMETEXT.h"
+#include "static/STORY.h"
+#include "syscode.h"
 
 #define CTL_M_ADLIBUPPIC	CTL_S_ADLIBUPPIC
 #define CTL_M_ADLIBDNPIC	CTL_S_ADLIBDNPIC
 
 #pragma	hdrstop
-
-#pragma	warn	-pia
 
 #define	MaxX	320
 #define	MaxY	200
@@ -61,12 +63,15 @@
 
 #define	MaxHighName	57
 #define	MaxScores	10
+#pragma pack(push)
+#pragma pack(2)
 typedef	struct
 		{
 			char	name[MaxHighName + 1];
-			long	score;
+			int32_t	score;
 			word	completed;
 		} HighScore;
+#pragma pack(pop)
 
 #define	MaxGameName		32
 #define	MaxSaveGames	7
@@ -102,7 +107,7 @@ static	memptr		LineOffsets;
 
 static	boolean		Button0,Button1,
 					CursorBad;
-static	int			CursorX,CursorY;
+static	short		CursorX,CursorY;
 
 static	void		(*USL_MeasureString)(char far *,word *,word *) = VW_MeasurePropString,
 					(*USL_DrawString)(char far *) = VWB_DrawPropString;
@@ -134,11 +139,12 @@ static	HighScore	Scores[MaxScores] =
 //			from DOS.
 //
 ///////////////////////////////////////////////////////////////////////////
-#pragma	warn	-par
-#pragma	warn	-rch
 int
 USL_HardError(word errval,int ax,int bp,int si)
 {
+	exit(-1); // mstodo : alt?
+
+	/* mstodo : error handler
 #define IGNORE  0
 #define RETRY   1
 #define	ABORT   2
@@ -219,9 +225,8 @@ oh_kill_me:
 #undef	IGNORE
 #undef	RETRY
 #undef	ABORT
+	*/
 }
-#pragma	warn	+par
-#pragma	warn	+rch
 
 ///////////////////////////////////////////////////////////////////////////
 //
@@ -275,14 +280,16 @@ USL_ReadConfig(void)
 	SMMode		sm;
 	ControlType	ctl;
 
-	if ((file = open("KDREAMS.CFG",O_BINARY | O_RDONLY)) != -1)
+	if ((file = _open("KDREAMS.CFG",O_BINARY | O_RDONLY)) != -1)
 	{
-		read(file,Scores,sizeof(HighScore) * MaxScores);
-		read(file,&sd,sizeof(sd));
-		read(file,&sm,sizeof(sm));
-		read(file,&ctl,sizeof(ctl));
-		read(file,&(KbdDefs[0]),sizeof(KbdDefs[0]));
-		close(file);
+		short temp;
+
+		_read(file,Scores,sizeof(HighScore) * MaxScores);
+		_read(file,&temp,sizeof(temp)); sd = temp;
+		_read(file,&temp,sizeof(temp)); sm = temp;
+		_read(file,&temp,sizeof(temp)); ctl = temp;
+		_read(file,&(KbdDefs[0]),sizeof(KbdDefs[0]));
+		_close(file);
 
 		HighScoresDirty = false;
 		gotit = true;
@@ -312,16 +319,18 @@ USL_WriteConfig(void)
 {
 	int	file;
 
-	file = open("KDREAMS.CFG", O_CREAT | O_BINARY | O_WRONLY,
+	file = _open("KDREAMS.CFG", O_CREAT | O_BINARY | O_WRONLY,
 				S_IREAD | S_IWRITE | S_IFREG);
 	if (file != -1)
 	{
-		write(file,Scores,sizeof(HighScore) * MaxScores);
-		write(file,&SoundMode,sizeof(SoundMode));
-		write(file,&MusicMode,sizeof(MusicMode));
-		write(file,&(Controls[0]),sizeof(Controls[0]));
-		write(file,&(KbdDefs[0]),sizeof(KbdDefs[0]));
-		close(file);
+		short temp;
+
+		_write(file,Scores,sizeof(HighScore) * MaxScores);
+		temp = SoundMode;   _write(file,&temp,sizeof(temp));
+		temp = MusicMode;   _write(file,&temp,sizeof(temp));
+		temp = Controls[0]; _write(file,&temp,sizeof(temp));
+		_write(file,&(KbdDefs[0]),sizeof(KbdDefs[0]));
+		_close(file);
 	}
 }
 
@@ -347,16 +356,16 @@ USL_CheckSavedGames(void)
 	{
 		filename = USL_GiveSaveName(i);
 		ok = false;
-		if ((file = open(filename,O_BINARY | O_RDONLY)) != -1)
+		if ((file = _open(filename,O_BINARY | O_RDONLY)) != -1)
 		{
 			if
 			(
-				(read(file,game,sizeof(*game)) == sizeof(*game))
+				(_read(file,game,sizeof(*game)) == sizeof(*game))
 			&&	(!strcmp(game->signature,EXTENSION))
 			)
 				ok = true;
 
-			close(file);
+			_close(file);
 		}
 
 		if (ok)
@@ -380,8 +389,6 @@ US_Startup(void)
 {
 	if (US_Started)
 		return;
-
-	harderr(USL_HardError);	// Install the fatal error handler
 
 	US_InitRndT(true);		// Initialize the random number generator
 
@@ -432,7 +439,7 @@ US_CheckParm(char *parm,char **strings)
 			*p,*s;
 	int		i;
 
-	while (!isalpha(*parm))	// Skip non-alphas
+	while (!isalpha(*parm) && *parm)	// Skip non-alphas
 		parm++;
 
 	for (i = 0;*strings && **strings;i++)
@@ -462,6 +469,7 @@ US_CheckParm(char *parm,char **strings)
 static void
 USL_ScreenDraw(word x,word y,char *s,byte attr)
 {
+	/* mstodo : columns
 	byte	far *screen;
 
 	screen = MK_FP(0xb800,(x * 2) + (y * 80 * 2));
@@ -470,6 +478,8 @@ USL_ScreenDraw(word x,word y,char *s,byte attr)
 		*screen++ = *s++;
 		*screen++ = attr;
 	}
+	*/
+	printf("%s\n", s);
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -481,6 +491,8 @@ USL_ScreenDraw(word x,word y,char *s,byte attr)
 static void
 USL_ClearTextScreen(void)
 {
+	/* mstodo : clear text screen
+
 	// Set to 80x25 color text mode
 	_AL = 3;				// Mode 3
 	_AH = 0x00;
@@ -493,7 +505,7 @@ USL_ClearTextScreen(void)
 	_DH = 24;				// Bottom row
 	_AH = 0x02;
 	geninterrupt(0x10);
-
+*/
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -513,7 +525,9 @@ US_TextScreen(void)
 
 #define	scr_rowcol(y,x)	{sx = (x) - 1;sy = (y) - 1;}
 #define	scr_aputs(s,a)	USL_ScreenDraw(sx,sy,(s),(a))
-#include "ID_US_S.c"
+#ifdef WIN32
+	#include "ID_US_S.c"
+#endif
 #undef	scr_rowcol
 #undef	scr_aputs
 
@@ -562,12 +576,12 @@ USL_Show(word x,word y,word w,boolean show,boolean hilight)
 //
 ///////////////////////////////////////////////////////////////////////////
 static void
-USL_ShowMem(word x,word y,long mem)
+USL_ShowMem(word x,word y,int32_t mem)
 {
 	char	buf[16];
 	word	i;
 
-	for (i = strlen(ltoa(mem,buf,10));i < 5;i++)
+	for (i = strlen(_ltoa(mem,buf,10));i < 5;i++)
 		USL_ScreenDraw(x++,y," ",0x48);
 	USL_ScreenDraw(x,y,buf,0x48);
 }
@@ -681,6 +695,10 @@ US_Print(char *s)
 {
 	char	c,*se;
 	word	w,h;
+	char	temp[1024];
+
+	strcpy_s(temp, 1024, s);
+	s = temp;
 
 	while (*s)
 	{
@@ -718,7 +736,7 @@ US_PrintUnsigned(longword n)
 {
 	char	buffer[32];
 
-	US_Print(ultoa(n,buffer,10));
+	US_Print(_ultoa(n,buffer,10));
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -727,11 +745,11 @@ US_PrintUnsigned(longword n)
 //
 ///////////////////////////////////////////////////////////////////////////
 void
-US_PrintSigned(long n)
+US_PrintSigned(int32_t n)
 {
 	char	buffer[32];
 
-	US_Print(ltoa(n,buffer,10));
+	US_Print(_ltoa(n,buffer,10));
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -804,6 +822,10 @@ US_CPrint(char *s)
 {
 	char	c,*se;
 	word	w,h;
+	char	temp[1024];
+
+	strcpy_s(temp, 1024, s);
+	s = temp;
 
 	while (*s)
 	{
@@ -1055,8 +1077,8 @@ USL_XORICursor(int x,int y,char *s,word cursor)
 //
 ///////////////////////////////////////////////////////////////////////////
 boolean
-US_LineInput(int x,int y,char *buf,char *def,boolean escok,
-				int maxchars,int maxwidth)
+US_LineInput(short x,short y,char *buf,char *def,boolean escok,
+				short maxchars,short maxwidth)
 {
 	boolean		redraw,
 				cursorvis,cursormoved,
@@ -1090,15 +1112,10 @@ US_LineInput(int x,int y,char *buf,char *def,boolean escok,
 		if (cursorvis)
 			USL_XORICursor(x,y,s,cursor);
 
-	asm	pushf
-	asm	cli
-
 		sc = LastScan;
 		LastScan = sc_None;
 		c = LastASCII;
 		LastASCII = key_None;
-
-	asm	popf
 
 		switch (sc)
 		{
@@ -1507,10 +1524,8 @@ USL_HandleError(int num)
 		strcat(buf,"Unknown");
 	else if (num == ENOMEM)
 		strcat(buf,"Disk is Full");
-	else if (num == EINVFMT)
-		strcat(buf,"File is Incomplete");
-	else
-		strcat(buf,sys_errlist[num]);
+	else if (strerror(num))
+		strcat(buf,strerror(num));
 
 	VW_HideCursor();
 
@@ -1664,6 +1679,8 @@ USL_DoHit(word hiti,word hitn)
 			break;
 		case uii_KeyCap:
 			break;
+		default:
+			break;
 		}
 	}
 }
@@ -1813,10 +1830,10 @@ USL_TrackItem(word hiti,word hitn)
 //
 ///////////////////////////////////////////////////////////////////////////
 static void
-USL_GlideCursor(long newx,long newy)
+USL_GlideCursor(int32_t newx,int32_t newy)
 {
 	word	steps;
-	long	x,y,
+	int32_t	x,y,
 			dx,dy;
 
 	if (grmode == CGAGR)
@@ -1824,10 +1841,10 @@ USL_GlideCursor(long newx,long newy)
 	else
 		steps = 8;
 
-	x = (long)CursorX << 16;
-	dx = ((newx << 16) - x) / steps;
-	y = (long)CursorY << 16;
-	dy = ((newy << 16) - y) / steps;
+	x = (int32_t)CursorX << 16;
+	dx = ((newx << 16) - x) / (int32_t)steps;
+	y = (int32_t)CursorY << 16;
+	dy = ((newy << 16) - y) / (int32_t)steps;
 
 	while ((CursorX != newx) || (CursorY != newy))
 	{
@@ -2003,6 +2020,8 @@ USL_FindRect(Rect r,Motion xd,Motion yd)
 		case motion_Right:
 			i1 = 5,i2 = 8,i3 = 2;
 			break;
+		default:
+			break;
 		}
 		break;
 	case motion_Down:
@@ -2125,11 +2144,9 @@ USL_CtlCKbdButtonCustom(UserCall call,word i,word n)
 			break;
 		}
 
-		asm	pushf
-		asm	cli
+		SYS_Update();
 		if (LastScan == sc_LShift)
 			LastScan = sc_None;
-		asm	popf
 	} while (!(scan = LastScan));
 	IN_ClearKey(scan);
 	if (scan != sc_Escape)
@@ -2152,7 +2169,7 @@ USL_CtlCKbdButtonCustom(UserCall call,word i,word n)
 		}
 		else
 		{
-			ip->text = IN_GetScanName(scan);
+			ip->text = (char*)IN_GetScanName(scan);
 			*(KeyMaps[n]) = scan;
 			FlushHelp = true;
 		}
@@ -2201,11 +2218,13 @@ USL_CtlCJoyButtonCustom(UserCall call,word i,word n)
 		if (LastScan != sc_Escape)
 		{
 			IN_GetJoyAbs(joy,&minx,&miny);
-			while (IN_GetJoyButtonsDB(joy));
+			while (IN_GetJoyButtonsDB(joy))
+				SYS_Update();
 
 			USL_ShowHelp("Move Joystick to the Lower-Right");
 			VW_UpdateScreen();
-			while ((LastScan != sc_Escape) && !IN_GetJoyButtonsDB(joy));
+			while ((LastScan != sc_Escape) && !IN_GetJoyButtonsDB(joy))
+				SYS_Update();
 
 			if (LastScan != sc_Escape)
 			{
@@ -2217,7 +2236,8 @@ USL_CtlCJoyButtonCustom(UserCall call,word i,word n)
 					IN_SetupJoy(joy,minx,maxx,miny,maxy);
 				}
 				else
-					while (IN_GetJoyButtonsDB(joy));
+					while (IN_GetJoyButtonsDB(joy))
+						SYS_Update();
 			}
 			else
 				Done = true;
@@ -2229,7 +2249,7 @@ USL_CtlCJoyButtonCustom(UserCall call,word i,word n)
 
 	if (LastScan != sc_Escape)
 		while (IN_GetJoyButtonsDB(joy))
-			;
+			SYS_Update();
 
 	if (LastScan)
 		IN_ClearKeysDown();
@@ -2266,7 +2286,7 @@ USL_ClearBottom(void)
 //
 ///////////////////////////////////////////////////////////////////////////
 static word
-USL_FormatHelp(char far *text,long len)
+USL_FormatHelp(char far *text,int32_t len)
 {
 	word	line,
 			w,h,
@@ -2346,7 +2366,7 @@ USL_DrawHelp(char far *text,word start,word end,word line,word h,word far *lp)
 //
 ///////////////////////////////////////////////////////////////////////////
 static void
-USL_DoHelp(memptr text,long len)
+USL_DoHelp(memptr text,int32_t len)
 {
 	boolean		done,
 				moved;
@@ -2387,6 +2407,8 @@ USL_DoHelp(memptr text,long len)
 	waitkey = sc_None;
 	while (!done)
 	{
+		SYS_Update();
+
 		if (moved)
 		{
 			while (TimeCount - lasttime < 5)
@@ -2411,6 +2433,7 @@ USL_DoHelp(memptr text,long len)
 				num = (page < lines)? page : lines;
 				loc = 0;
 			}
+
 			if (scroll)
 			{
 				if (grmode == CGAGR)
@@ -2435,7 +2458,6 @@ USL_DoHelp(memptr text,long len)
 					destbase = base + ylookup[WindowY];
 					if (grmode == EGAGR)
 					{
-						EGAWRITEMODE(1);
 						VW_WaitVBL(1);
 					}
 					VW_ScreenToScreen(srcbase,destbase,WindowW / pixdiv,
@@ -2463,6 +2485,8 @@ USL_DoHelp(memptr text,long len)
 					VW_ScreenToScreen(base + bufferofs,base + displayofs,
 										WindowW / pixdiv,h);
 				}
+
+				SYS_Present();
 			}
 			else
 			{
@@ -2476,8 +2500,10 @@ USL_DoHelp(memptr text,long len)
 		}
 
 		if (waitkey)
+		{
 			while (IN_KeyDown(waitkey))
-				;
+				SYS_Update();
+		}
 		waitkey = sc_None;
 
 		IN_ReadCursor(&info);
@@ -2548,6 +2574,7 @@ USL_DoHelp(memptr text,long len)
 	IN_ClearKeysDown();
 	do
 	{
+		SYS_Update();
 		IN_ReadCursor(&info);
 	} while (info.button0 || info.button1);
 
@@ -2586,25 +2613,24 @@ USL_CtlHButtonCustom(UserCall call,word i,word n)
 
 #ifdef	HELPTEXTLINKED	// Ugly hack because of lack of disk space...
 	{
-extern	char	far gametext,far context,far story;
 		char	far *buf;
 		memptr	dupe;
 
 		switch (n)
 		{
 		case 0:
-			buf = &gametext;
+			buf = gametext;
 			break;
 		case 1:
-			buf = &context;
+			buf = context;
 			break;
 		case 2:
-			buf = &story;
+			buf = story;
 			break;
 		}
 
 		MM_GetPtr(&dupe,5600);
-		_fmemcpy((char far *)dupe,buf,5600);
+		memcpy((char far *)dupe,buf,5600);
 
 		USL_DoHelp(dupe,5600);
 
@@ -2616,7 +2642,7 @@ extern	char	far gametext,far context,far story;
 	{
 		char	*name;
 		int		file;
-		long	len;
+		int32_t	len;
 		memptr	buf;
 
 		switch (n)
@@ -2634,7 +2660,7 @@ extern	char	far gametext,far context,far story;
 			Quit("Bad help button number");
 		}
 
-		if ((file = open(name,O_RDONLY | O_TEXT)) == -1)
+		if ((file = _open(name,O_RDONLY | O_TEXT)) == -1)
 			USL_HandleError(errno);
 		else
 		{
@@ -2646,7 +2672,7 @@ extern	char	far gametext,far context,far story;
 			else
 				USL_HandleError(errno);
 
-			close(file);
+			_close(file);
 			MM_FreePtr(&buf);
 		}
 
@@ -2772,9 +2798,9 @@ USL_CtlDLButtonCustom(UserCall call,word i,word n)
 		VW_UpdateScreen();
 
 		err = 0;
-		if ((file = open(filename,O_BINARY | O_RDONLY)) != -1)
+		if ((file = _open(filename,O_BINARY | O_RDONLY)) != -1)
 		{
-			if (read(file,game,sizeof(*game)) == sizeof(*game))
+			if (_read(file,game,sizeof(*game)) == sizeof(*game))
 			{
 				if (USL_LoadGame)
 					if (!USL_LoadGame(file))
@@ -2782,7 +2808,7 @@ USL_CtlDLButtonCustom(UserCall call,word i,word n)
 			}
 			else
 				USL_HandleError(err = errno);
-			close(file);
+			_close(file);
 		}
 		else
 			USL_HandleError(err = errno);
@@ -2850,11 +2876,11 @@ USL_CtlDSButtonCustom(UserCall call,word i,word n)
 		LeaveDriveOn++;
 		filename = USL_GiveSaveName(n / 2);
 		err = 0;
-		file = open(filename,O_CREAT | O_BINARY | O_WRONLY,
+		file = _open(filename,O_CREAT | O_BINARY | O_WRONLY,
 					S_IREAD | S_IWRITE | S_IFREG);
 		if (file != -1)
 		{
-			if (write(file,game,sizeof(*game)) == sizeof(*game))
+			if (_write(file,game,sizeof(*game)) == sizeof(*game))
 			{
 				if (USL_SaveGame)
 					ok = USL_SaveGame(file);
@@ -2863,7 +2889,7 @@ USL_CtlDSButtonCustom(UserCall call,word i,word n)
 			}
 			else
 				USL_HandleError(err = ((errno == ENOENT)? ENOMEM : errno));
-			close(file);
+			_close(file);
 		}
 		else
 			USL_HandleError(err = ((errno == ENOENT)? ENOMEM : errno));
@@ -3057,7 +3083,7 @@ USL_CtlPRButtonCustom(UserCall call,word i,word n)
 static boolean
 USL_CtlDEButtonCustom(UserCall call,word i,word n)
 {
-	boolean		result;
+	boolean		result = true;
 	UserItem	*ip;
 
 	i++,n++;	// Shut the compiler up
@@ -3128,7 +3154,7 @@ USL_HitHotKey(int i,int n)
 {
 	UserItem	*ip;
 
-	if (ip = TheItems[++i])
+	if ((ip = TheItems[++i]))
 	{
 		if ((n = USL_FindDown(TheItems[i])) == -1)
 			n = 0;
@@ -3269,20 +3295,15 @@ USL_SetUpCtlPanel(void)
 
 	// Set up Keyboard
 	for (i = 0;i < 10;i++)
-		CtlCKbdPanels[i].text = IN_GetScanName(*(KeyMaps[i]));
+		CtlCKbdPanels[i].text = (char*)IN_GetScanName(*(KeyMaps[i]));
 
 	// Set up Sounds
 	USL_TurnOff(CtlSPanels);
 	CtlSPanels[sdm_AdLib].sel = AdLibPresent? ui_Normal : ui_Disabled;
-#if 0	// DEBUG - hack because no space for digitized sounds on Keen Dreams
 	CtlSPanels[sdm_SoundBlaster].sel =
 		SoundBlasterPresent? ui_Normal : ui_Disabled;
 	CtlSPanels[sdm_SoundSource].sel =
 		SoundSourcePresent? ui_Normal : ui_Disabled;
-#else
-	CtlSPanels[sdm_SoundBlaster].sel = ui_Disabled;
-	CtlSPanels[sdm_SoundSource].sel = ui_Disabled;
-#endif
 	CtlSPanels[SoundMode].sel |= ui_Selected;
 
 	// Set up SoundSource
@@ -3590,7 +3611,7 @@ US_ControlPanel(void)
 //
 ///////////////////////////////////////////////////////////////////////////
 void
-US_DisplayHighScores(int which)
+US_DisplayHighScores(short which)
 {
 	char		buffer[16],*str;
 	word		i,
@@ -3629,7 +3650,7 @@ US_DisplayHighScores(int which)
 			y = PrintY;
 
 		PrintX = x + (7 * 8);
-		ultoa(s->score,buffer,10);
+		_ultoa(s->score,buffer,10);
 		for (str = buffer;*str;str++)
 			*str = *str + (129 - '0');	// Used fixed-width numbers (129...)
 		USL_MeasureString(buffer,&w,&h);
@@ -3668,7 +3689,7 @@ US_DisplayHighScores(int which)
 //
 ///////////////////////////////////////////////////////////////////////////
 void
-US_CheckHighScore(long score,word other)
+US_CheckHighScore(int32_t score,word other)
 {
 	word		i,j,
 				n;

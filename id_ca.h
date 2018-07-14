@@ -34,8 +34,6 @@
 
 //===========================================================================
 
-#define MAPHEADERLINKED
-#define GRHEADERLINKED
 #define AUDIOHEADERLINKED
 
 #define NUMMAPS	30
@@ -58,23 +56,35 @@
 
 //===========================================================================
 
+#pragma pack(push)
+#pragma pack(2)
+
 typedef	struct
 {
-	long		planestart[3];
-	unsigned	planelength[3];
-	unsigned	width,height;
+	int32_t		planestart[3];
+	uint16_t	planelength[3];
+	uint16_t	width,height;
 	char		name[16];
 } maptype;
 
+#pragma pack(pop)
+
 //===========================================================================
 
-extern	byte 		_seg	*tinf;
-extern	int			mapon;
+extern	const char	*fn_egahead;
+extern	const char	*fn_egadict;
+extern	const char	*fn_egadata;
+extern	const char	*fn_maphead;
+extern	const char	*fn_mapdict;
+extern	const char	*fn_mapdata;
 
-extern	unsigned	_seg	*mapsegs[3];
-extern	maptype		_seg	*mapheaderseg[NUMMAPS];
-extern	byte		_seg	*audiosegs[NUMSNDCHUNKS];
-extern	void		_seg	*grsegs[NUMCHUNKS];
+extern	byte 		_seg	*tinf;
+extern	short		mapon;
+
+extern	unsigned short	_seg	*mapsegs[3];
+extern	maptype			_seg	*mapheaderseg[NUMMAPS];
+extern	byte			_seg	*audiosegs[NUMSNDCHUNKS];
+extern	void			_seg	*grsegs[NUMCHUNKS];
 
 extern	byte		grneeded[NUMCHUNKS];
 extern	byte		ca_levelbit,ca_levelnum;
@@ -87,25 +97,22 @@ extern	int			profilehandle;
 
 // just for the score box reshifting
 
-void CAL_ShiftSprite (unsigned segment,unsigned source,unsigned dest,
-	unsigned width, unsigned height, unsigned pixshift);
+void CAL_ShiftSprite (void * segment, unsigned short source, unsigned short dest, unsigned short width, unsigned short height, unsigned short pixshift);
 
 //===========================================================================
 
-boolean CA_FarRead (int handle, byte far *dest, long length);
-boolean CA_FarWrite (int handle, byte far *source, long length);
+boolean CA_FarRead (int handle, byte far *dest, int32_t length);
+boolean CA_FarWrite (int handle, byte far *source, int32_t length);
 boolean CA_LoadFile (char *filename, memptr *ptr);
 
-long CA_RLEWCompress (unsigned huge *source, long length, unsigned huge *dest,
-  unsigned rlewtag);
+int32_t CA_RLEWCompress (unsigned short huge *source, int32_t length, unsigned short huge *dest, unsigned short rlewtag);
 
-void CA_RLEWexpand (unsigned huge *source, unsigned huge *dest,long length,
-  unsigned rlewtag);
+void CA_RLEWexpand (unsigned short huge *source, unsigned short huge *dest, int32_t length, unsigned short rlewtag);
 
 void CA_Startup (void);
 void CA_Shutdown (void);
 
-void CA_CacheAudioChunk (int chunk);
+void CA_CacheAudioChunk (short chunk);
 void CA_LoadAllSounds (void);
 
 void CA_UpLevel (void);
@@ -116,8 +123,8 @@ void CA_ClearAllMarks (void);
 
 #define CA_MarkGrChunk(chunk)	grneeded[chunk]|=ca_levelbit
 
-void CA_CacheGrChunk (int chunk);
-void CA_CacheMap (int mapnum);
+void CA_CacheGrChunk (short chunk);
+void CA_CacheMap (short mapnum);
 
 void CA_CacheMarks (char *title, boolean cachedownlevel);
 

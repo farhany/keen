@@ -20,13 +20,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include <alloc.h>
 #include <fcntl.h>
-#include <dos.h>
-#include <io.h>
+//#include <io.h>
 
 #include "kd_def.h"
-//#include "gelib.h"
 #include "jam_io.h"
 
 //----------------------------------------------------------------------------
@@ -46,14 +43,14 @@
 // NOTE : For PtrTypes DEST_MEM a ZERO (0) is always returned.
 //
 //---------------------------------------------------------------------------
-char WritePtr(long outfile, unsigned char data, unsigned PtrType)
+char WritePtr(uintptr_t outfile, unsigned char data, unsigned short PtrType)
 {
 	int returnval = 0;
 
 	switch (PtrType & DEST_TYPES)
 	{
 		case DEST_FILE:
-			write(*(int far *)outfile,(char *)&data,1);
+			_write(*(int far *)outfile,(char *)&data,1);
 		break;
 
 		case DEST_FFILE:
@@ -66,7 +63,11 @@ char WritePtr(long outfile, unsigned char data, unsigned PtrType)
 		break;
 
 		case DEST_MEM:
-			*((char far *)*(char far **)outfile)++ = data;
+		{
+			char ** pp = (char **)outfile;
+			**pp = data;
+			*pp = *pp + 1;
+		}
 		break;
 	}
 
@@ -85,14 +86,14 @@ char WritePtr(long outfile, unsigned char data, unsigned PtrType)
 //
 //
 //---------------------------------------------------------------------------
-int ReadPtr(long infile, unsigned PtrType)
+int ReadPtr(uintptr_t infile, unsigned short PtrType)
 {
 	int returnval = 0;
 
 	switch (PtrType & SRC_TYPES)
 	{
 		case SRC_FILE:
-			read(*(int far *)infile,(char *)&returnval,1);
+			_read(*(int far *)infile,(char *)&returnval,1);
 		break;
 
 		case SRC_FFILE:
@@ -109,7 +110,11 @@ int ReadPtr(long infile, unsigned PtrType)
 //		break;
 
 		case SRC_MEM:
-			returnval = (unsigned char)*((char far *)*(char far **)infile)++;
+		{
+			char ** pp = (char **)infile;
+			returnval = **pp;
+			*pp = *pp + 1;
+		}
 		break;
 	}
 

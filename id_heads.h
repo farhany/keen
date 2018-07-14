@@ -18,19 +18,60 @@
 
 // ID_GLOB.H
 
+#pragma once
 
-#include <ALLOC.H>
 #include <ctype.h>
-#include <DOS.H>
 #include <ERRNO.H>
 #include <FCNTL.H>
-#include <IO.H>
-#include <MEM.H>
-#include <process.h>
 #include <STDIO.H>
 #include <STDLIB.H>
 #include <STRING.H>
-#include <SYS\STAT.H>
+#include <SYS/STAT.H>
+
+#ifdef WIN32
+	#include <IO.H>
+#else
+	#include <unistd.h>
+#endif
+
+#include <stdint.h>
+
+#define SUPER_SMOOTH_SCROLLING 1
+
+#define _seg
+#define far
+#define near
+#define huge
+#define MK_FP(x, y) (((byte*)x) + (y))
+#define FP_SEG(x) (x)
+#ifndef WIN32
+	#include <assert.h>
+	#define O_BINARY 0
+	#define _open open
+	#define _close close
+	#define _read read
+	#define _write write
+	#define _lseek lseek
+	static int _filelength(int file)
+	{
+		struct stat s;
+		fstat(file, &s);
+		return s.st_size;
+	}
+	#define _stricmp strcasecmp
+	#define strcpy_s(dst, dstSize, src) strcpy(dst, src)
+	#define sprintf_s(dst, dstSize, fmt, ...) sprintf(dst, fmt, __VA_ARGS__)
+	static char * _ltoa(long v, char * s, int radix)
+	{
+		assert(radix == 10);
+		sprintf(s, "%d", (int)v);
+		return s;
+	}
+	#define _ultoa(v, s, radix) _ltoa((long)v, s, radix)
+#endif
+
+extern int _argc;
+extern char ** _argv;
 
 #define __ID_GLOB__
 
@@ -49,9 +90,6 @@
 #if GRMODE == EGAGR
 #define GREXT	"EGA"
 #endif
-#if GRMODE == CGAGR
-#define GREXT	"CGA"
-#endif
 
 //#define PROFILE
 
@@ -64,10 +102,11 @@
 #ifndef	__TYPES__
 #define	__TYPES__
 
-typedef	enum	{false,true}	boolean;
+typedef	enum {false,true}		booleanValues;
+typedef	unsigned	char		boolean;
 typedef	unsigned	char		byte;
-typedef	unsigned	int			word;
-typedef	unsigned	long		longword;
+typedef	uint16_t				word;
+typedef	uint32_t				longword;
 typedef	byte *					Ptr;
 
 typedef	struct

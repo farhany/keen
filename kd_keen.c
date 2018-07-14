@@ -72,8 +72,8 @@ player->temp4 =
 =============================================================================
 */
 
-int	singlegravity;
-unsigned	bounceangle[8][8] =
+short			singlegravity;
+unsigned short	bounceangle[8][8] =
 {
 {0,0,0,0,0,0,0,0},
 {7,6,5,4,3,2,1,0},
@@ -95,7 +95,7 @@ unsigned	bounceangle[8][8] =
 */
 
 int	jumptime;
-long	leavepoletime;		// TimeCount when jumped off pole
+int32_t	leavepoletime;		// TimeCount when jumped off pole
 
 /*
 =============================================================================
@@ -111,7 +111,7 @@ void ScoreReact (objtype *ob);
 
 void MemDrawChar (int char8,byte far *dest,unsigned width,unsigned planesize);
 
-statetype s_score	= {NULL,NULL,think,false,
+statetype s_score	= {0,0,think,false,
 	false,0, 0,0, ScoreThink , NULL, ScoreReact, NULL};
 
 
@@ -128,7 +128,7 @@ void	SpawnScore (void)
 	scoreobj->obclass = inertobj;
 	scoreobj->active = allways;
 	scoreobj->needtoclip = false;
-	*((long *)&(scoreobj->temp1)) = -1;		// force score to be updated
+	*((int32_t *)&(scoreobj->temp1)) = -1;		// force score to be updated
 	scoreobj->temp3 = -1;			// and flower power
 	scoreobj->temp4 = -1;			// and lives
 	NewState (scoreobj,&s_score);
@@ -137,10 +137,9 @@ void	SpawnScore (void)
 
 void	FixScoreBox (void)
 {
-	unsigned	width, planesize;
-	unsigned smallplane,bigplane;
+	unsigned short		width, planesize;
 	spritetype	_seg	*block;
-	byte	far	*dest;
+	byte far	*dest;
 
 // draw boobus bomb if on level 15, else flower power
 	block = (spritetype _seg *)grsegs[SCOREBOXSPR];
@@ -178,89 +177,33 @@ void	FixScoreBox (void)
 
 void MemDrawChar (int char8,byte far *dest,unsigned width,unsigned planesize)
 {
-asm	mov	si,[char8]
-asm	shl	si,1
-asm	shl	si,1
-asm	shl	si,1
-asm	shl	si,1
-asm	shl	si,1		// index into char 8 segment
+	unsigned short idx = char8;
+	unsigned char * __restrict src;
+	unsigned char * __restrict dst;
+	unsigned char plane;
 
-asm	mov	ds,[WORD PTR grsegs+STARTTILE8*2]
-asm	mov	es,[WORD PTR dest+2]
+	idx <<= 5;
 
-asm	mov	cx,4		// draw four planes
-asm	mov	bx,[width]
-asm	dec	bx
+	src = (unsigned char*)grsegs[STARTTILE8] + idx;
+	dst = dest;
 
-planeloop:
+	for (plane = 0; plane < 4; ++plane)
+	{
+		unsigned char y;
+		unsigned char * __restrict dst2 = dst;
 
-asm	mov	di,[WORD PTR dest]
+		for (y = 0; y < 8; ++y)
+		{
+			*dst2 = *src;
 
-asm	movsb
-asm	add	di,bx
-asm	movsb
-asm	add	di,bx
-asm	movsb
-asm	add	di,bx
-asm	movsb
-asm	add	di,bx
-asm	movsb
-asm	add	di,bx
-asm	movsb
-asm	add	di,bx
-asm	movsb
-asm	add	di,bx
-asm	movsb
+			src += 1;
+			dst2 += width;
+		}
 
-asm	mov	ax,[planesize]
-asm	add	[WORD PTR dest],ax
-
-asm	loop	planeloop
-
-asm	mov	ax,ss
-asm	mov	ds,ax
-
+		dst += planesize;
+	}
 }
-#endif
 
-#if GRMODE == CGAGR
-void MemDrawChar (int char8,byte far *dest,unsigned width,unsigned planesize)
-{
-asm	mov	si,[char8]
-asm	shl	si,1
-asm	shl	si,1
-asm	shl	si,1
-asm	shl	si,1		// index into char 8 segment
-
-asm	mov	ds,[WORD PTR grsegs+STARTTILE8*2]
-asm	mov	es,[WORD PTR dest+2]
-
-asm	mov	bx,[width]
-asm	sub	bx,2
-
-asm	mov	di,[WORD PTR dest]
-
-asm	movsw
-asm	add	di,bx
-asm	movsw
-asm	add	di,bx
-asm	movsw
-asm	add	di,bx
-asm	movsw
-asm	add	di,bx
-asm	movsw
-asm	add	di,bx
-asm	movsw
-asm	add	di,bx
-asm	movsw
-asm	add	di,bx
-asm	movsw
-
-asm	mov	ax,ss
-asm	mov	ds,ax
-
-	planesize++;		// shut the compiler up
-}
 #endif
 
 
@@ -276,18 +219,27 @@ void ShiftScore (void)
 {
 	spritetabletype far *spr;
 	spritetype _seg *dest;
+	unsigned short i;
 
 	spr = &spritetable[SCOREBOXSPR-STARTSPRITES];
 	dest = (spritetype _seg *)grsegs[SCOREBOXSPR];
 
-	CAL_ShiftSprite (FP_SEG(dest),dest->sourceoffset[0],
+#if SUPER_SMOOTH_SCROLLING
+	for (i = 1; i < 8; ++i)
+	{
+		CAL_ShiftSprite (dest,dest->sourceoffset[0],
+		dest->sourceoffset[i],spr->width,spr->height,i);
+	}
+#else
+	CAL_ShiftSprite (dest,dest->sourceoffset[0],
 		dest->sourceoffset[1],spr->width,spr->height,2);
 
-	CAL_ShiftSprite (FP_SEG(dest),dest->sourceoffset[0],
+	CAL_ShiftSprite (dest,dest->sourceoffset[0],
 		dest->sourceoffset[2],spr->width,spr->height,4);
 
-	CAL_ShiftSprite (FP_SEG(dest),dest->sourceoffset[0],
+	CAL_ShiftSprite (dest,dest->sourceoffset[0],
 		dest->sourceoffset[3],spr->width,spr->height,6);
+#endif
 }
 #endif
 
@@ -309,8 +261,8 @@ void ScoreThink (objtype *ob)
 //
 // score changed
 //
-	if ((gamestate.score>>16) != ob->temp1
-		|| (unsigned)gamestate.score != ob->temp2 )
+	if ((gamestate.score>>16) != ob->temp1 // mstodo : put score in single temp
+		|| (unsigned short)gamestate.score != ob->temp2 )
 	{
 		block = (spritetype _seg *)grsegs[SCOREBOXSPR];
 		width = block->width[0];
@@ -318,7 +270,7 @@ void ScoreThink (objtype *ob)
 		dest = (byte far *)grsegs[SCOREBOXSPR]+block->sourceoffset[0]
 			+ planesize + width*4 + 1*CHARWIDTH;
 
-		ltoa (gamestate.score,str,10);
+		_ltoa (gamestate.score,str,10);
 
 		// erase leading spaces
 		length = strlen(str);
@@ -335,7 +287,7 @@ void ScoreThink (objtype *ob)
 #endif
 		ob->needtoreact = true;
 		ob->temp1 = gamestate.score>>16;
-		ob->temp2 = gamestate.score;
+		ob->temp2 = (unsigned short)gamestate.score;
 	}
 
 //
@@ -356,7 +308,7 @@ void ScoreThink (objtype *ob)
 		if (number > 99)
 			strcpy (str,"99");
 		else
-			ltoa (number,str,10);
+			_ltoa (number,str,10);
 
 		// erase leading spaces
 		length = strlen(str);
@@ -420,14 +372,6 @@ void ScoreReact (objtype *ob)
 	RF_PlaceSprite (&ob->sprite
 		,ob->x+4*PIXGLOBAL
 		,ob->y+4*PIXGLOBAL
-		,SCOREBOXSPR
-		,spritedraw
-		,PRIORITIES-1);
-#endif
-#if GRMODE == CGAGR
-	RF_PlaceSprite (&ob->sprite
-		,ob->x+8*PIXGLOBAL
-		,ob->y+8*PIXGLOBAL
 		,SCOREBOXSPR
 		,spritedraw
 		,PRIORITIES-1);
@@ -503,7 +447,7 @@ statetype s_powerblink2	= {-1,-1,step,false,
 ===============
 */
 
-void ThrowPower (unsigned x, unsigned y, int dir)
+void ThrowPower (unsigned short x, unsigned short y, short dir)
 {
 	statetype *startstate;
 
@@ -615,8 +559,8 @@ void	PowerCount (objtype *ob)
 
 void	CalcSingleGravity (void)
 {
-	unsigned	speed;
-	long	i;
+	unsigned short	speed;
+	int32_t			i;
 //
 // only accelerate on odd tics, because of limited precision
 //
@@ -647,7 +591,7 @@ void	CalcSingleGravity (void)
 
 void	PowerContact (objtype *ob, objtype *hit)
 {
-	unsigned	x,y,yspot,xspot;
+	unsigned short	x,y,yspot,xspot;
 
 	switch (hit->obclass)
 	{
@@ -678,6 +622,8 @@ void	PowerContact (objtype *ob, objtype *hit)
 		SD_PlaySound (BOMBBOOMSND);
 		ChangeState (ob,&s_bombexplode);
 		break;
+	default:
+		break;
 	}
 }
 
@@ -692,8 +638,8 @@ void	PowerContact (objtype *ob, objtype *hit)
 
 void	PowerReact (objtype *ob)
 {
-	unsigned wall,absx,absy,angle,newangle;
-	unsigned long speed;
+	unsigned short wall,absx,absy,angle,newangle;
+	uint32_t speed;
 
 	PLACESPRITE;
 	if (ob->hiteast || ob->hitwest)
@@ -772,63 +718,63 @@ void	PowerReact (objtype *ob)
 		switch (newangle)
 		{
 		case 0:
-			ob->xspeed = speed / 286;
+			ob->xspeed = (int)(speed / 286);
 			ob->yspeed = -ob->xspeed / 2;
 			break;
 		case 1:
-			ob->xspeed = speed / 362;
+			ob->xspeed = (int)(speed / 362);
 			ob->yspeed = -ob->xspeed;
 			break;
 		case 2:
-			ob->yspeed = -(speed / 286);
+			ob->yspeed = -(int)(speed / 286);
 			ob->xspeed = -ob->yspeed / 2;
 			break;
 		case 3:
 
 		case 4:
 			ob->xspeed = 0;
-			ob->yspeed = -(speed / 256);
+			ob->yspeed = -(int)(speed / 256);
 			break;
 		case 5:
-			ob->yspeed = -(speed / 286);
+			ob->yspeed = -(int)(speed / 286);
 			ob->xspeed = ob->yspeed / 2;
 			break;
 		case 6:
-			ob->xspeed = ob->yspeed = -(speed / 362);
+			ob->xspeed = ob->yspeed = -(int)(speed / 362);
 			break;
 		case 7:
-			ob->xspeed = -(speed / 286);
+			ob->xspeed = -(int)(speed / 286);
 			ob->yspeed = ob->xspeed / 2;
 			break;
 
 		case 8:
-			ob->xspeed = -(speed / 286);
+			ob->xspeed = -(int)(speed / 286);
 			ob->yspeed = -ob->xspeed / 2;
 			break;
 		case 9:
-			ob->xspeed = -(speed / 362);
+			ob->xspeed = -(int)(speed / 362);
 			ob->yspeed = -ob->xspeed;
 			break;
 		case 10:
-			ob->yspeed = speed / 286;
+			ob->yspeed = (int)(speed / 286);
 			ob->xspeed = -ob->yspeed / 2;
 			break;
 		case 11:
 
 		case 12:
 			ob->xspeed = 0;
-			ob->yspeed = -(speed / 256);
+			ob->yspeed = -(int)(speed / 256);
 			break;
 		case 13:
-			ob->yspeed = speed / 286;
+			ob->yspeed = (int)(speed / 286);
 			ob->xspeed = ob->yspeed / 2;
 			break;
 		case 14:
-			ob->xspeed = speed / 362;
-			ob->yspeed = speed / 362;
+			ob->xspeed = (int)(speed / 362);
+			ob->yspeed = (int)(speed / 362);
 			break;
 		case 15:
-			ob->xspeed = speed / 286;
+			ob->xspeed = (int)(speed / 286);
 			ob->yspeed = ob->xspeed / 2;
 			break;
 		}
@@ -869,7 +815,7 @@ player->temp2 = animation stage
 =============================================================================
 */
 
-void	SpawnWorldKeen (int tilex, int tiley);
+void	SpawnWorldKeen (short tilex, short tiley);
 void	KeenWorldThink		(objtype *ob);
 void	KeenWorldWalk		(objtype *ob);
 
@@ -888,9 +834,7 @@ extern	statetype s_worldkeensleep2;
 
 extern	statetype s_worldwalk;
 
-#pragma warn -sus
-
-statetype s_worldkeen	= {NULL,NULL,stepthink,false,
+statetype s_worldkeen	= {0,0,stepthink,false,
 	false,360, 0,0, KeenWorldThink, NULL, DrawReact, &s_worldkeenwave1};
 
 statetype s_worldkeenwave1= {WORLDKEENWAVE1SPR,WORLDKEENWAVE1SPR,stepthink,false,
@@ -912,10 +856,8 @@ statetype s_worldkeensleep1	= {WORLDKEENSLEEP1SPR,WORLDKEENSLEEP1SPR,stepthink,f
 statetype s_worldkeensleep2	= {WORLDKEENSLEEP2SPR,WORLDKEENSLEEP2SPR,stepthink,false,
 	false,90, 0,0, KeenWorldThink, NULL, DrawReact, &s_worldkeensleep2};
 
-statetype s_worldwalk	= {NULL,NULL,slide,false,
+statetype s_worldwalk	= {0,0,slide,false,
 	false,4, 16,16, KeenWorldWalk, NULL, DrawReact, &s_worldwalk};
-
-#pragma warn +sus
 
 /*
 ======================
@@ -925,7 +867,7 @@ statetype s_worldwalk	= {NULL,NULL,slide,false,
 ======================
 */
 
-void	SpawnWorldKeen (int tilex, int tiley)
+void	SpawnWorldKeen (short tilex, short tiley)
 {
 	player->obclass = keenobj;
 	if (!gamestate.worldx)
@@ -960,12 +902,12 @@ void	SpawnWorldKeen (int tilex, int tiley)
 
 void	CheckEnterLevel (objtype *ob)
 {
-	int	x,y,tile;
+	short int	x,y,tile;
 
 	for (y=ob->tiletop;y<=ob->tilebottom;y++)
 		for (x=ob->tileleft;x<=ob->tileright;x++)
 		{
-			tile = *((unsigned _seg *)mapsegs[2]+mapbwidthtable[y]/2+x);
+			tile = *((unsigned short _seg *)mapsegs[2]+mapbwidthtable[y]/2+x);
 			if (tile >= 3 && tile <=18)
 			{
 			//
@@ -1027,11 +969,11 @@ void	KeenWorldThink (objtype *ob)
 ======================
 */
 
-int worldshapes[8] = {WORLDKEENU1SPR-1,WORLDKEENUR1SPR-1,WORLDKEENR1SPR-1,
+short worldshapes[8] = {WORLDKEENU1SPR-1,WORLDKEENUR1SPR-1,WORLDKEENR1SPR-1,
 	WORLDKEENDR1SPR-1,WORLDKEEND1SPR-1,WORLDKEENDL1SPR-1,WORLDKEENL1SPR-1,
 	WORLDKEENUL1SPR-1};
 
-int worldanims[4] ={2,3,1,3};
+short worldanims[4] ={2,3,1,3};
 
 void	KeenWorldWalk (objtype *ob)
 {
@@ -1203,8 +1145,6 @@ extern	statetype s_keenairthrowup3;
 extern	statetype s_keenairthrowdown1;
 extern	statetype s_keenairthrowdown2;
 extern	statetype s_keenairthrowdown3;
-
-#pragma warn -sus
 
 //-------------------
 
@@ -1381,8 +1321,6 @@ statetype s_keenairthrowdown3= {KEENJLTHROWD2SPR,KEENJRTHROWD2SPR,stepthink,fals
 
 //===========================================================================
 
-#pragma warn +sus
-
 
 /*
 ===============
@@ -1392,7 +1330,7 @@ statetype s_keenairthrowdown3= {KEENJLTHROWD2SPR,KEENJRTHROWD2SPR,stepthink,fals
 ===============
 */
 
-void SpawnKeen (int tilex, int tiley, int dir)
+void SpawnKeen (short tilex, short tiley, short dir)
 {
 	player->obclass = keenobj;
 	player->active = yes;
@@ -1417,8 +1355,8 @@ void SpawnKeen (int tilex, int tiley, int dir)
 
 boolean	CheckGrabPole (objtype *ob)
 {
-	int	x;
-	unsigned far *map;
+	short int	x;
+	unsigned short far *map;
 
 //
 // kludgy bit to not let you grab a pole the instant you jump off it
@@ -1429,10 +1367,10 @@ boolean	CheckGrabPole (objtype *ob)
 		return false;
 
 	if (c.yaxis == -1)
-		map = (unsigned _seg *)mapsegs[1]+
+		map = (unsigned short _seg *)mapsegs[1]+
 			mapbwidthtable[(ob->top+6*PIXGLOBAL)/TILEGLOBAL]/2;
 	else
-		map = (unsigned _seg *)mapsegs[1]+
+		map = (unsigned short _seg *)mapsegs[1]+
 			mapbwidthtable[ob->tilebottom]/2;
 
 	x = (ob->left + (ob->right - ob->left)/2) >>G_T_SHIFT;
@@ -1618,7 +1556,7 @@ void KeenGoSleepThink (objtype *ob)
 	new->ydir = -1;
 	NewState (new,&s_keenzee1);
 
-	ob->temp1 = (int)new;				// so they can be removed later
+	ob->temp1 = (intptr_t)new;				// so they can be removed later
 }
 
 
@@ -1636,7 +1574,7 @@ void KeenSleepThink (objtype *ob)
 {
 	if (c.dir != dir_None || c.button0 || c.button1)
 	{
-		if (ob->temp1 != (unsigned)&dummyobj)
+		if (ob->temp1 != (intptr_t)&dummyobj)
 			RemoveObj ((objtype *)ob->temp1);	// remove the zees
 		ob->temp1 = ob->temp2 = 0;			// not paused any more
 		ob->state = &s_keengetup;
@@ -1673,8 +1611,8 @@ void KeenDieThink (objtype *ob)
 
 void KeenDuckThink (objtype *ob)
 {
-	unsigned far *map, tile;
-	int midtile,bottomtile,move;
+	unsigned short far *map, tile;
+	short int midtile,bottomtile,move;
 
 	if (c.yaxis != 1)
 	{
@@ -1695,7 +1633,7 @@ void KeenDuckThink (objtype *ob)
 
 		midtile = (ob->tileleft + ob->tileright) >> 1;
 		bottomtile = ob->tilebottom;
-		map = (unsigned far *)mapsegs[1] + mapbwidthtable[bottomtile]/2
+		map = (unsigned short far *)mapsegs[1] + mapbwidthtable[bottomtile]/2
 			+ midtile;
 		tile = *map;
 		if (tinf[WESTWALL+tile] || tinf[EASTWALL+tile]
@@ -1746,11 +1684,11 @@ void KeenDropDownThink (objtype *ob)
 =======================
 */
 
-unsigned slopespeed[8] = {0,0,4,4,8,-4,-4,-8};
+unsigned short slopespeed[8] = {0,0,4,4,8,-4,-4,-8};
 
 void KeenWalkThink (objtype *ob)
 {
-	int move;
+	short move;
 
 	if (!c.xaxis)
 	{
@@ -1895,7 +1833,7 @@ void	KeenAirThink		(objtype *ob)
 =======================
 */
 
-int	polexspeed[3] = {-SPDPOLESIDEJUMP,0,SPDPOLESIDEJUMP};
+short	polexspeed[3] = {-SPDPOLESIDEJUMP,0,SPDPOLESIDEJUMP};
 
 void	PoleActions (objtype *ob)
 {
@@ -1938,7 +1876,7 @@ void	PoleActions (objtype *ob)
 
 void	KeenPoleThink		(objtype *ob)
 {
-	unsigned far *map, tile;
+	unsigned short far *map, tile;
 
 	switch (c.yaxis)
 	{
@@ -1952,6 +1890,9 @@ void	KeenPoleThink		(objtype *ob)
 		ob->ydir = 1;
 		KeenDropThink (ob);
 		return;
+
+	default:
+		break;
 	}
 
 	if (c.xaxis)
@@ -1988,9 +1929,9 @@ void	KeenPoleThink		(objtype *ob)
 
 void	KeenClimbThink		(objtype *ob)
 {
-	unsigned far *map;
+	unsigned short far *map;
 
-	map = (unsigned _seg *)mapsegs[1]+mapbwidthtable[ob->tiletop]/2+ob->temp4;
+	map = (unsigned short _seg *)mapsegs[1]+mapbwidthtable[ob->tiletop]/2+ob->temp4;
 
 	if ((tinf[INTILE+*map]&0x7f) != 1)
 	{
@@ -2011,6 +1952,9 @@ void	KeenClimbThink		(objtype *ob)
 		ob->ydir = 1;
 		KeenDropThink (ob);
 		break;
+
+	default:
+		break;
 	}
 
 	PoleActions (ob);
@@ -2027,9 +1971,9 @@ void	KeenClimbThink		(objtype *ob)
 
 void	KeenDropThink		(objtype *ob)
 {
-	unsigned far *map;
+	unsigned short far *map;
 
-	map = (unsigned _seg *)mapsegs[1]+mapbwidthtable[ob->tilebottom]/2+ob->temp4;
+	map = (unsigned short _seg *)mapsegs[1]+mapbwidthtable[ob->tilebottom]/2+ob->temp4;
 
 	if ((tinf[INTILE+*map]&0x7f) != 1)
 	{
@@ -2054,6 +1998,9 @@ void	KeenDropThink		(objtype *ob)
 	case 0:
 		ob->state = &s_keenpole;
 		ob->ydir = 0;
+		break;
+
+	default:
 		break;
 	}
 
@@ -2190,7 +2137,7 @@ void KillKeen (void)
 ============================
 */
 
-unsigned bonuspoints[6] = {100,200,500,1000,2000,5000};
+unsigned short bonuspoints[6] = {100,200,500,1000,2000,5000};
 
 void	KeenContact (objtype *ob, objtype *hit)
 {
@@ -2327,6 +2274,8 @@ void	KeenContact (objtype *ob, objtype *hit)
 			KillKeen ();
 		break;
 
+	default:
+		break;
 	}
 }
 
@@ -2444,8 +2393,8 @@ placeit:
 
 void	KeenAirReact (objtype *ob)
 {
-	int x,y;
-	unsigned far *map,mapextra;
+	short x,y;
+	unsigned short far *map,mapextra;
 
 	if (ob->hiteast || ob->hitwest)
 		ob->xspeed = 0;
@@ -2510,7 +2459,7 @@ checknorth:
 
 void	KeenSlideReact (objtype *ob)
 {
-	unsigned far *map;
+	unsigned short far *map;
 
 	if (ob->hitnorth)			// friction slow down
 	{

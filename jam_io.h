@@ -81,16 +81,16 @@ typedef enum ct_TYPES
 
 struct COMPStruct
 {
-	unsigned long DecompLen;
+	uint32_t DecompLen;
 
 };
 
 
 struct CMP1Header
 {
-	unsigned CompType;					// SEE: ct_TYPES above for list of pos.
-	unsigned long OrginalLen;			// Orginal FileLength of compressed Data.
-	unsigned long CompressLen;			// Length of data after compression (A MUST for LZHUFF!)
+	uint16_t CompType;					// SEE: ct_TYPES above for list of pos.
+	uint32_t OrginalLen;			// Orginal FileLength of compressed Data.
+	uint32_t CompressLen;			// Length of data after compression (A MUST for LZHUFF!)
 };
 
 
@@ -101,7 +101,7 @@ struct CMP1Header
 //
 //---------------------------------------------------------------------------
 
-char WritePtr(long outfile, unsigned char data, unsigned PtrType);
-int ReadPtr(long infile, unsigned PtrType);
+char WritePtr(uintptr_t outfile, unsigned char data, unsigned short PtrType);
+int ReadPtr(uintptr_t infile, unsigned short PtrType);
 
 

@@ -19,6 +19,7 @@
 // ID_VW.C
 
 #include "ID_HEADS.H"
+#include "syscode.h"
 
 /*
 =============================================================================
@@ -38,10 +39,6 @@
 #define SCREENXDIV		(8)
 #endif
 
-#if GRMODE == CGAGR
-#define SCREENXMASK		(~3)
-#define SCREENXDIV		(4)
-#endif
 /*
 =============================================================================
 
@@ -53,16 +50,15 @@
 cardtype	videocard;		// set by VW_Startup
 grtype		grmode;			// CGAgr, EGAgr, VGAgr
 
-unsigned	bufferofs;		// hidden area to draw to before displaying
-unsigned	displayofs;		// origin of the visable screen
-unsigned	panx,pany;		// panning adjustments inside port in pixels
-unsigned	pansx,pansy;	// panning adjustments inside port in screen
-							// block limited pixel values (ie 0/8 for ega x)
-unsigned	panadjust;		// panx/pany adjusted by screen resolution
+unsigned short	bufferofs;		// hidden area to draw to before displaying
+unsigned short	displayofs;		// origin of the visable screen
+unsigned short	panx,pany;		// panning adjustments inside port in pixels
+unsigned short	pansx,pansy;	// panning adjustments inside port in screen
+								// block limited pixel values (ie 0/8 for ega x)
+unsigned short	panadjust;		// panx/pany adjusted by screen resolution
 
-unsigned	screenseg;		// normally 0xa000 / 0xb800
-unsigned	linewidth;
-unsigned	ylookup[VIRTUALHEIGHT];
+unsigned short	linewidth;
+unsigned short	ylookup[VIRTUALHEIGHT];
 
 boolean		screenfaded;
 
@@ -86,13 +82,13 @@ void 	VWL_DBSetup (void);
 void	VWL_UpdateScreenBlocks (void);
 
 
-int			bordercolor;
-int			cursorvisible;
-int			cursornumber,cursorwidth,cursorheight,cursorx,cursory;
-memptr		cursorsave;
-unsigned	cursorspot;
+short			bordercolor;
+short			cursorvisible;
+short			cursornumber,cursorwidth,cursorheight,cursorx,cursory;
+memptr			cursorsave;
+unsigned short	cursorspot;
 
-extern	unsigned	bufferwidth,bufferheight;	// used by font drawing stuff
+extern	unsigned short	bufferwidth,bufferheight;	// used by font drawing stuff
 
 //===========================================================================
 
@@ -109,36 +105,13 @@ static	char *ParmStrings[] = {"HIDDENCARD",""};
 
 void	VW_Startup (void)
 {
-	int i;
-
-	asm	cld;
-
-	videocard = 0;
-
-	for (i = 1;i < _argc;i++)
-		if (US_CheckParm(_argv[i],ParmStrings) == 0)
-		{
-			videocard = EGAcard;
-			break;
-		}
-
-	if (!videocard)
-		videocard = VW_VideoID ();
+	videocard = EGAcard;
 
 #if GRMODE == EGAGR
 	grmode = EGAGR;
 	if (videocard != EGAcard && videocard != VGAcard)
-Quit ("Improper video card!  If you really have an EGA/VGA card that I am not \n"
-	  "detecting, use the -HIDDENCARD command line parameter!");
-	EGAWRITEMODE(0);
-#endif
-
-#if GRMODE == CGAGR
-	grmode = CGAGR;
-	if (videocard < CGAcard || videocard > VGAcard)
-Quit ("Improper video card!  If you really have a CGA card that I am not \n"
-	  "detecting, use the -HIDDENCARD command line parameter!");
-	MM_GetPtr (&(memptr)screenseg,0x10000l);	// grab 64k for floating screen
+		Quit ("Improper video card!  If you really have an EGA/VGA card that I am not \n"
+			"detecting, use the -HIDDENCARD command line parameter!");
 #endif
 
 	cursorvisible = 0;
@@ -173,37 +146,8 @@ void	VW_Shutdown (void)
 ========================
 */
 
-void VW_SetScreenMode (int grmode)
+void VW_SetScreenMode (short grmode)
 {
-	switch (grmode)
-	{
-	  case TEXTGR:  _AX = 3;
-		  geninterrupt (0x10);
-		  screenseg=0xb000;
-		  break;
-	  case CGAGR: _AX = 4;
-		  geninterrupt (0x10);		// screenseg is actually a main mem buffer
-		  break;
-	  case EGAGR: _AX = 0xd;
-		  geninterrupt (0x10);
-		  screenseg=0xa000;
-		  break;
-#ifdef VGAGAME
-	  case VGAGR:{
-		  char extern VGAPAL;	// deluxepaint vga pallet .OBJ file
-		  void far *vgapal = &VGAPAL;
-		  SetCool256 ();		// custom 256 color mode
-		  screenseg=0xa000;
-		  _ES = FP_SEG(vgapal);
-		  _DX = FP_OFF(vgapal);
-		  _BX = 0;
-		  _CX = 0x100;
-		  _AX = 0x1012;
-		  geninterrupt(0x10);			// set the deluxepaint pallet
-
-		  break;
-#endif
-	}
 	VW_SetLineWidth(SCREENWIDTH);
 }
 
@@ -224,25 +168,24 @@ char colors[7][17]=
  {0x1f,0x1f,0x1f,0x1f,0x1f,0x1f,0x1f,0x1f,0x1f,0x1f,0x1f,0x1f,0x1f,0x1f,0x1f,0x1f,0x1f}};
 
 
-void VW_ColorBorder (int color)
+void VW_ColorBorder (short color)
 {
+	/* mstodo : video : VW_ColorBorder
 	_AH=0x10;
 	_AL=1;
 	_BH=color;
 	geninterrupt (0x10);
+	*/
 	bordercolor = color;
 }
 
 void VW_SetDefaultColors(void)
 {
 #if GRMODE == EGAGR
-	colors[3][16] = bordercolor;
-	_ES=FP_SEG(&colors[3]);
-	_DX=FP_OFF(&colors[3]);
-	_AX=0x1002;
-	geninterrupt(0x10);
-	screenfaded = false;
+	colors[3][16] = (char)bordercolor;
+	SYS_SetPalette(colors[3]);
 #endif
+	screenfaded = false;
 }
 
 
@@ -253,15 +196,12 @@ void VW_FadeOut(void)
 
 	for (i=3;i>=0;i--)
 	{
-	  colors[i][16] = bordercolor;
-	  _ES=FP_SEG(&colors[i]);
-	  _DX=FP_OFF(&colors[i]);
-	  _AX=0x1002;
-	  geninterrupt(0x10);
+	  colors[i][16] = (char)bordercolor;
+	  SYS_SetPalette(colors[i]);
 	  VW_WaitVBL(6);
 	}
-	screenfaded = true;
 #endif
+	screenfaded = true;
 }
 
 
@@ -272,15 +212,12 @@ void VW_FadeIn(void)
 
 	for (i=0;i<4;i++)
 	{
-	  colors[i][16] = bordercolor;
-	  _ES=FP_SEG(&colors[i]);
-	  _DX=FP_OFF(&colors[i]);
-	  _AX=0x1002;
-	  geninterrupt(0x10);
+	  colors[i][16] = (char)bordercolor;
+      SYS_SetPalette(colors[i]);
 	  VW_WaitVBL(6);
 	}
-	screenfaded = false;
 #endif
+	screenfaded = false;
 }
 
 void VW_FadeUp(void)
@@ -290,15 +227,12 @@ void VW_FadeUp(void)
 
 	for (i=3;i<6;i++)
 	{
-	  colors[i][16] = bordercolor;
-	  _ES=FP_SEG(&colors[i]);
-	  _DX=FP_OFF(&colors[i]);
-	  _AX=0x1002;
-	  geninterrupt(0x10);
+	  colors[i][16] = (char)bordercolor;
+      SYS_SetPalette(colors[i]);
 	  VW_WaitVBL(6);
 	}
-	screenfaded = true;
 #endif
+	screenfaded = true;
 }
 
 void VW_FadeDown(void)
@@ -308,15 +242,12 @@ void VW_FadeDown(void)
 
 	for (i=5;i>2;i--)
 	{
-	  colors[i][16] = bordercolor;
-	  _ES=FP_SEG(&colors[i]);
-	  _DX=FP_OFF(&colors[i]);
-	  _AX=0x1002;
-	  geninterrupt(0x10);
+	  colors[i][16] = (char)bordercolor;
+	  SYS_SetPalette(colors[i]);
 	  VW_WaitVBL(6);
 	}
-	screenfaded = false;
 #endif
+	screenfaded = false;
 }
 
 
@@ -333,20 +264,9 @@ void VW_FadeDown(void)
 ====================
 */
 
-void VW_SetLineWidth (int width)
+void VW_SetLineWidth (short width)
 {
-  int i,offset;
-
-#if GRMODE == EGAGR
-//
-// set wide virtual screen
-//
-asm	mov	dx,CRTC_INDEX
-asm	mov	al,CRTC_OFFSET
-asm mov	ah,[BYTE PTR width]
-asm	shr	ah,1
-asm	out	dx,ax
-#endif
+	short i,offset;
 
 //
 // set up lookup tables
@@ -372,23 +292,20 @@ asm	out	dx,ax
 ====================
 */
 
-void	VW_ClearVideo (int color)
+void	VW_ClearVideo (short color)
 {
-#if GRMODE == EGAGR
-	EGAWRITEMODE(2);
-	EGAMAPMASK(15);
-#endif
+	unsigned char plane;
 
-asm	mov	es,[screenseg]
-asm	xor	di,di
-asm	mov	cx,0xffff
-asm	mov	al,[BYTE PTR color]
-asm	rep	stosb
-asm	stosb
+	for (plane = 0; plane < 4; ++plane)
+		memset(g0xA000[plane], color & (1 << plane) ? 0xff : 0x00, 0xffff); // sizeof(g0xA000[0])
+}
 
-#if GRMODE == EGAGR
-	EGAWRITEMODE(0);
-#endif
+void VW_WaitVBL (short number)
+{
+	while (number--)
+	{
+		SYS_Present();
+	}
 }
 
 //===========================================================================
@@ -405,11 +322,11 @@ asm	stosb
 ====================
 */
 
-void VW_DrawPic(unsigned x, unsigned y, unsigned chunknum)
+void VW_DrawPic(unsigned short x, unsigned short y, unsigned short chunknum)
 {
-	int	picnum = chunknum - STARTPICS;
+	short	picnum = chunknum - STARTPICS;
 	memptr source;
-	unsigned dest,width,height;
+	unsigned short dest,width,height;
 
 	source = grsegs[chunknum];
 	dest = ylookup[y]+x+bufferofs;
@@ -433,11 +350,11 @@ void VW_DrawPic(unsigned x, unsigned y, unsigned chunknum)
 ====================
 */
 
-void VW_DrawMPic(unsigned x, unsigned y, unsigned chunknum)
+void VW_DrawMPic(unsigned short x, unsigned short y, unsigned short chunknum)
 {
-	int	picnum = chunknum - STARTPICM;
+	short	picnum = chunknum - STARTPICM;
 	memptr source;
-	unsigned dest,width,height;
+	unsigned short dest,width,height;
 
 	source = grsegs[chunknum];
 	dest = ylookup[y]+x+bufferofs;
@@ -467,11 +384,11 @@ void VW_DrawMPic(unsigned x, unsigned y, unsigned chunknum)
 ====================
 */
 
-void VW_DrawSprite(int x, int y, unsigned chunknum)
+void VW_DrawSprite(short x, short y, unsigned short chunknum)
 {
 	spritetabletype far *spr;
 	spritetype _seg	*block;
-	unsigned	dest,shift;
+	unsigned short	dest,shift;
 
 	spr = &spritetable[chunknum-STARTSPRITES];
 	block = (spritetype _seg *)grsegs[chunknum];
@@ -480,10 +397,11 @@ void VW_DrawSprite(int x, int y, unsigned chunknum)
 	x+=spr->orgx>>G_P_SHIFT;
 
 #if GRMODE == EGAGR
+#if SUPER_SMOOTH_SCROLLING
+	shift = (x&7);
+#else
 	shift = (x&7)/2;
 #endif
-#if GRMODE == CGAGR
-	shift = 0;
 #endif
 
 	dest = bufferofs + ylookup[y];
@@ -513,15 +431,12 @@ void VW_DrawSprite(int x, int y, unsigned chunknum)
 unsigned char leftmask[8] = {0xff,0x7f,0x3f,0x1f,0xf,7,3,1};
 unsigned char rightmask[8] = {0x80,0xc0,0xe0,0xf0,0xf8,0xfc,0xfe,0xff};
 
-void VW_Hlin(unsigned xl, unsigned xh, unsigned y, unsigned color)
+void VW_Hlin(unsigned short xl, unsigned short xh, unsigned short y, unsigned short color)
 {
-  unsigned dest,xlb,xhb,maskleft,maskright,mid;
+	unsigned short dest,xlb,xhb,maskleft,maskright,mid,plane,i;
 
 	xlb=xl/8;
 	xhb=xh/8;
-
-	EGAWRITEMODE(2);
-	EGAMAPMASK(15);
 
 	maskleft = leftmask[xl&7];
 	maskright = rightmask[xh&7];
@@ -529,151 +444,38 @@ void VW_Hlin(unsigned xl, unsigned xh, unsigned y, unsigned color)
 	mid = xhb-xlb-1;
 	dest = bufferofs+ylookup[y]+xlb;
 
-  if (xlb==xhb)
-  {
-  //
-  // entire line is in one byte
-  //
-
-	maskleft&=maskright;
-
-	asm	mov	es,[screenseg]
-	asm	mov	di,[dest]
-
-	asm	mov	dx,GC_INDEX
-	asm	mov	al,GC_BITMASK
-	asm	mov	ah,[BYTE PTR maskleft]
-	asm	out	dx,ax		// mask off pixels
-
-	asm	mov	al,[BYTE PTR color]
-	asm	xchg	al,[es:di]	// load latches and write pixels
-
-	goto	done;
-  }
-
-asm	mov	es,[screenseg]
-asm	mov	di,[dest]
-asm	mov	dx,GC_INDEX
-asm	mov	bh,[BYTE PTR color]
-
-//
-// draw left side
-//
-asm	mov	al,GC_BITMASK
-asm	mov	ah,[BYTE PTR maskleft]
-asm	out	dx,ax		// mask off pixels
-
-asm	mov	al,bh
-asm	mov	bl,[es:di]	// load latches
-asm	stosb
-
-//
-// draw middle
-//
-asm	mov	ax,GC_BITMASK + 255*256
-asm	out	dx,ax		// no masking
-
-asm	mov	al,bh
-asm	mov	cx,[mid]
-asm	rep	stosb
-
-//
-// draw right side
-//
-asm	mov	al,GC_BITMASK
-asm	mov	ah,[BYTE PTR maskright]
-asm	out	dx,ax		// mask off pixels
-
-asm	xchg	bh,[es:di]	// load latches and write pixels
-
-done:
-	EGABITMASK(255);
-	EGAWRITEMODE(0);
-}
-#endif
-
-
-#if GRMODE == CGAGR
-
-unsigned char pixmask[4] = {0xc0,0x30,0x0c,0x03};
-unsigned char leftmask[4] = {0xff,0x3f,0x0f,0x03};
-unsigned char rightmask[4] = {0xc0,0xf0,0xfc,0xff};
-unsigned char colorbyte[4] = {0,0x55,0xaa,0xff};
-
-//
-// could be optimized for rep stosw
-//
-void VW_Hlin(unsigned xl, unsigned xh, unsigned y, unsigned color)
-{
-	unsigned dest,xlb,xhb,mid;
-	byte maskleft,maskright;
-
-	color = colorbyte[color];	// expand 2 color bits to 8
-
-	xlb=xl/4;
-	xhb=xh/4;
-
-	maskleft = leftmask[xl&3];
-	maskright = rightmask[xh&3];
-
-	mid = xhb-xlb-1;
-	dest = bufferofs+ylookup[y]+xlb;
-asm	mov	es,[screenseg]
-
 	if (xlb==xhb)
 	{
-	//
-	// entire line is in one byte
-	//
+		//
+		// entire line is in one byte
+		//
+
 		maskleft&=maskright;
 
-		asm	mov	ah,[maskleft]
-		asm	mov	bl,[BYTE PTR color]
-		asm	and	bl,[maskleft]
-		asm	not	ah
-
-		asm	mov	di,[dest]
-
-		asm	mov	al,[es:di]
-		asm	and	al,ah			// mask out pixels
-		asm	or	al,bl			// or in color
-		asm	mov	[es:di],al
-		return;
+		for (plane = 0; plane < 4; ++plane)
+		{
+			unsigned char * __restrict dst = g0xA000[plane] + dest;
+			dst[0] = (dst[0] & ~maskleft) | (color & maskleft);
+		}
 	}
+	else
+	{
+		for (plane = 0; plane < 4; ++plane)
+		{
+			unsigned char * __restrict dst = g0xA000[plane] + dest;
+			unsigned char pcolor = (color & (1 << plane)) ? 0xff : 0x00;
 
-asm	mov	di,[dest]
-asm	mov	bh,[BYTE PTR color]
+			// draw left side
+			*dst = (*dst & ~maskleft) | (pcolor & maskleft); dst++;
 
-//
-// draw left side
-//
-asm	mov	ah,[maskleft]
-asm	mov	bl,bh
-asm	and	bl,[maskleft]
-asm	not	ah
-asm	mov	al,[es:di]
-asm	and	al,ah			// mask out pixels
-asm	or	al,bl			// or in color
-asm	stosb
+			// draw middle
+			for (i = 0; i < mid; ++i)
+				*dst++ = pcolor;
 
-//
-// draw middle
-//
-asm	mov	al,bh
-asm	mov	cx,[mid]
-asm	rep	stosb
-
-//
-// draw right side
-//
-asm	mov	ah,[maskright]
-asm	mov	bl,bh
-asm	and	bl,[maskright]
-asm	not	ah
-asm	mov	al,[es:di]
-asm	and	al,ah			// mask out pixels
-asm	or	al,bl			// or in color
-asm	stosb
+			// draw right side
+			*dst = (*dst & ~maskright) | (pcolor & maskright); dst++;
+		}
+	}
 }
 #endif
 
@@ -688,115 +490,51 @@ asm	stosb
 ==================
 */
 
-#if GRMODE == CGAGR
-
-void VW_Bar (unsigned x, unsigned y, unsigned width, unsigned height,
-	unsigned color)
-{
-	unsigned xh = x+width-1;
-
-	while (height--)
-		VW_Hlin (x,xh,y++,color);
-}
-
-#endif
-
 
 #if	GRMODE == EGAGR
 
-void VW_Bar (unsigned x, unsigned y, unsigned width, unsigned height,
-	unsigned color)
+void VW_Bar (unsigned short x, unsigned short y, unsigned short width, unsigned short height, unsigned short color)
 {
-	unsigned dest,xh,xlb,xhb,maskleft,maskright,mid;
+	unsigned short maskleft,maskright,xh,xlb,xhb,mid,plane,i;
 
 	xh = x+width-1;
 	xlb=x/8;
 	xhb=xh/8;
 
-	EGAWRITEMODE(2);
-	EGAMAPMASK(15);
-
 	maskleft = leftmask[x&7];
 	maskright = rightmask[xh&7];
 
 	mid = xhb-xlb-1;
-	dest = bufferofs+ylookup[y]+xlb;
 
-	if (xlb==xhb)
+	for (plane = 0; plane < 4; ++plane)
 	{
-	//
-	// entire line is in one byte
-	//
+		unsigned char pcolor = (color & (1 << plane)) ? 0xff : 0x00;
+		unsigned short iy;
 
-		maskleft&=maskright;
+		for (iy = 0; iy < height; ++iy)
+		{
+			unsigned char * dst = &g0xA000[plane][bufferofs + ylookup[y + iy] + x / 8];
 
-	asm	mov	es,[screenseg]
-	asm	mov	di,[dest]
+			if (xlb == xhb)
+			{
+				maskleft &= maskright;
 
-	asm	mov	dx,GC_INDEX
-	asm	mov	al,GC_BITMASK
-	asm	mov	ah,[BYTE PTR maskleft]
-	asm	out	dx,ax		// mask off pixels
+				*dst = (*dst & ~maskleft) | (pcolor & maskleft); dst++;
+			}
+			else
+			{
+				// draw left side
+				*dst = (*dst & ~maskleft) | (pcolor & maskleft); dst++;
 
-	asm	mov	ah,[BYTE PTR color]
-	asm	mov	dx,[linewidth]
-yloop1:
-	asm	mov	al,ah
-	asm	xchg	al,[es:di]	// load latches and write pixels
-	asm	add	di,dx			// down to next line
-	asm	dec	[height]
-	asm	jnz	yloop1
+				// draw middle
+				for (i = 0; i < mid; ++i)
+					*dst++ = pcolor;
 
-		goto	done;
+				// draw right side
+				*dst = (*dst & ~maskright) | (pcolor & maskright); dst++;
+			}
+		}
 	}
-
-asm	mov	es,[screenseg]
-asm	mov	di,[dest]
-asm	mov	bh,[BYTE PTR color]
-asm	mov	dx,GC_INDEX
-asm	mov	si,[linewidth]
-asm	sub	si,[mid]			// add to di at end of line to get to next scan
-asm	dec	si
-
-//
-// draw left side
-//
-yloop2:
-asm	mov	al,GC_BITMASK
-asm	mov	ah,[BYTE PTR maskleft]
-asm	out	dx,ax		// mask off pixels
-
-asm	mov	al,bh
-asm	mov	bl,[es:di]	// load latches
-asm	stosb
-
-//
-// draw middle
-//
-asm	mov	ax,GC_BITMASK + 255*256
-asm	out	dx,ax		// no masking
-
-asm	mov	al,bh
-asm	mov	cx,[mid]
-asm	rep	stosb
-
-//
-// draw right side
-//
-asm	mov	al,GC_BITMASK
-asm	mov	ah,[BYTE PTR maskright]
-asm	out	dx,ax		// mask off pixels
-
-asm	mov	al,bh
-asm	xchg	al,[es:di]	// load latches and write pixels
-
-asm	add	di,si		// move to start of next line
-asm	dec	[height]
-asm	jnz	yloop2
-
-done:
-	EGABITMASK(255);
-	EGAWRITEMODE(0);
 }
 
 #endif
@@ -817,7 +555,7 @@ VWL_MeasureString (char far *string, word *width, word *height, fontstruct _seg 
 {
 	*height = font->height;
 	for (*width = 0;*string;string++)
-		*width += font->width[*string];		// proportional width
+		*width += font->width[(unsigned char)(*string)];		// proportional width
 }
 
 void	VW_MeasurePropString (char far *string, word *width, word *height)
@@ -833,106 +571,6 @@ void	VW_MeasureMPropString  (char far *string, word *width, word *height)
 
 #endif
 
-
-/*
-=============================================================================
-
-							CGA stuff
-
-=============================================================================
-*/
-
-#if GRMODE == CGAGR
-
-#define CGACRTCWIDTH	40
-
-/*
-==========================
-=
-= VW_CGAFullUpdate
-=
-==========================
-*/
-
-void VW_CGAFullUpdate (void)
-{
-	byte	*update;
-	boolean	halftile;
-	unsigned	x,y,middlerows,middlecollumns;
-
-	displayofs = bufferofs+panadjust;
-
-asm	mov	ax,0xb800
-asm	mov	es,ax
-
-asm	mov	si,[displayofs]
-asm	xor	di,di
-
-asm	mov	bx,100				// pairs of scan lines to copy
-asm	mov	dx,[linewidth]
-asm	sub	dx,80
-
-asm	mov	ds,[screenseg]
-asm	test	si,1
-asm	jz	evenblock
-
-//
-// odd source
-//
-asm	mov	ax,39				// words accross screen
-copytwolineso:
-asm	movsb
-asm	mov	cx,ax
-asm	rep	movsw
-asm	movsb
-asm	add	si,dx
-asm	add	di,0x2000-80		// go to the interlaced bank
-asm	movsb
-asm	mov	cx,ax
-asm	rep	movsw
-asm	movsb
-asm	add	si,dx
-asm	sub	di,0x2000			// go to the non interlaced bank
-
-asm	dec	bx
-asm	jnz	copytwolineso
-asm	jmp	blitdone
-
-//
-// even source
-//
-evenblock:
-asm	mov	ax,40				// words accross screen
-copytwolines:
-asm	mov	cx,ax
-asm	rep	movsw
-asm	add	si,dx
-asm	add	di,0x2000-80		// go to the interlaced bank
-asm	mov	cx,ax
-asm	rep	movsw
-asm	add	si,dx
-asm	sub	di,0x2000			// go to the non interlaced bank
-
-asm	dec	bx
-asm	jnz	copytwolines
-
-blitdone:
-asm	mov	ax,ss
-asm	mov	ds,ax
-asm	mov	es,ax
-
-asm	xor	ax,ax				// clear out the update matrix
-asm	mov	cx,UPDATEWIDE*UPDATEHIGH/2
-
-asm	mov	di,[baseupdateptr]
-asm	rep	stosw
-
-	updateptr = baseupdateptr;
-	*(unsigned *)(updateptr + UPDATEWIDE*PORTTILESHIGH) = UPDATETERMINATE;
-}
-
-
-#endif
 
 /*
 =============================================================================
@@ -1024,7 +662,7 @@ void VW_HideCursor (void)
 ====================
 */
 
-void VW_MoveCursor (int x, int y)
+void VW_MoveCursor (short x, short y)
 {
 	cursorx = x;
 	cursory = y;
@@ -1042,7 +680,7 @@ void VW_MoveCursor (int x, int y)
 ====================
 */
 
-void VW_SetCursor (int spritenum)
+void VW_SetCursor (short spritenum)
 {
 	if (cursornumber)
 	{
@@ -1130,9 +768,9 @@ void VW_QuitDoubleBuffer (void)
 =======================
 */
 
-int VW_MarkUpdateBlock (int x1, int y1, int x2, int y2)
+int VW_MarkUpdateBlock (short x1, short y1, short x2, short y2)
 {
-	int	x,y,xt1,yt1,xt2,yt2,nextline;
+	short x,y,xt1,yt1,xt2,yt2,nextline;
 	byte *mark;
 
 	xt1 = x1>>PIXTOBLOCK;
@@ -1194,26 +832,7 @@ void VW_UpdateScreen (void)
 #if GRMODE == EGAGR
 	VWL_UpdateScreenBlocks();
 
-asm	cli
-asm	mov	cx,[displayofs]
-asm	add	cx,[panadjust]
-asm	mov	dx,CRTC_INDEX
-asm	mov	al,0ch		// start address high register
-asm	out	dx,al
-asm	inc	dx
-asm	mov	al,ch
-asm	out	dx,al
-asm	dec	dx
-asm	mov	al,0dh		// start address low register
-asm	out	dx,al
-asm	mov	al,cl
-asm	inc	dx
-asm	out	dx,al
-asm	sti
-
-#endif
-#if GRMODE == CGAGR
-	VW_CGAFullUpdate();
+	VW_SetScreen(displayofs+panadjust,-1);
 #endif
 
 	if (cursorvisible>0)
@@ -1222,7 +841,7 @@ asm	sti
 
 
 
-void VWB_DrawTile8 (int x, int y, int tile)
+void VWB_DrawTile8 (short x, short y, short tile)
 {
 	x+=pansx;
 	y+=pansy;
@@ -1230,9 +849,9 @@ void VWB_DrawTile8 (int x, int y, int tile)
 		VW_DrawTile8 (x/SCREENXDIV,y,tile);
 }
 
-void VWB_DrawTile8M (int x, int y, int tile)
+void VWB_DrawTile8M (short x, short y, short tile)
 {
-	int xb;
+	short xb;
 
 	x+=pansx;
 	y+=pansy;
@@ -1241,7 +860,7 @@ void VWB_DrawTile8M (int x, int y, int tile)
 		VW_DrawTile8M (xb,y,tile);
 }
 
-void VWB_DrawTile16 (int x, int y, int tile)
+void VWB_DrawTile16 (short x, short y, short tile)
 {
 	x+=pansx;
 	y+=pansy;
@@ -1249,9 +868,9 @@ void VWB_DrawTile16 (int x, int y, int tile)
 		VW_DrawTile16 (x/SCREENXDIV,y,tile);
 }
 
-void VWB_DrawTile16M (int x, int y, int tile)
+void VWB_DrawTile16M (short x, short y, short tile)
 {
-	int xb;
+	short xb;
 
 	x+=pansx;
 	y+=pansy;
@@ -1261,12 +880,12 @@ void VWB_DrawTile16M (int x, int y, int tile)
 }
 
 #if NUMPICS
-void VWB_DrawPic (int x, int y, int chunknum)
+void VWB_DrawPic (short x, short y, short chunknum)
 {
 // mostly copied from drawpic
-	int	picnum = chunknum - STARTPICS;
+	short	picnum = chunknum - STARTPICS;
 	memptr source;
-	unsigned dest,width,height;
+	unsigned short dest,width,height;
 
 	x+=pansx;
 	y+=pansy;
@@ -1283,12 +902,12 @@ void VWB_DrawPic (int x, int y, int chunknum)
 #endif
 
 #if NUMPICM>0
-void VWB_DrawMPic(int x, int y, int chunknum)
+void VWB_DrawMPic(short x, short y, short chunknum)
 {
 // mostly copied from drawmpic
-	int	picnum = chunknum - STARTPICM;
+	short	picnum = chunknum - STARTPICM;
 	memptr source;
-	unsigned dest,width,height;
+	unsigned short dest,width,height;
 
 	x+=pansx;
 	y+=pansy;
@@ -1305,7 +924,7 @@ void VWB_DrawMPic(int x, int y, int chunknum)
 #endif
 
 
-void VWB_Bar (int x, int y, int width, int height, int color)
+void VWB_Bar (short x, short y, short width, short height, short color)
 {
 	x+=pansx;
 	y+=pansy;
@@ -1317,7 +936,7 @@ void VWB_Bar (int x, int y, int width, int height, int color)
 #if NUMFONT
 void VWB_DrawPropString	 (char far *string)
 {
-	int x,y;
+	short x,y;
 	x = px+pansx;
 	y = py+pansy;
 	VW_DrawPropString (string);
@@ -1330,7 +949,7 @@ void VWB_DrawPropString	 (char far *string)
 #if NUMFONTM
 void VWB_DrawMPropString (char far *string)
 {
-	int x,y;
+	short x,y;
 	x = px+pansx;
 	y = py+pansy;
 	VW_DrawMPropString (string);
@@ -1339,11 +958,11 @@ void VWB_DrawMPropString (char far *string)
 #endif
 
 #if NUMSPRITES
-void VWB_DrawSprite(int x, int y, int chunknum)
+void VWB_DrawSprite(short x, short y, short chunknum)
 {
 	spritetabletype far *spr;
 	spritetype _seg	*block;
-	unsigned	dest,shift,width,height;
+	unsigned short	dest,shift,width,height;
 
 	x+=pansx;
 	y+=pansy;
@@ -1356,10 +975,11 @@ void VWB_DrawSprite(int x, int y, int chunknum)
 
 
 #if GRMODE == EGAGR
+#if SUPER_SMOOTH_SCROLLING
+	shift = (x&7);
+#else
 	shift = (x&7)/2;
 #endif
-#if GRMODE == CGAGR
-	shift = 0;
 #endif
 
 	dest = bufferofs + ylookup[y];
@@ -1378,15 +998,17 @@ void VWB_DrawSprite(int x, int y, int chunknum)
 }
 #endif
 
-void VWB_Plot (int x, int y, int color)
+/*
+void VWB_Plot (short x, short y, short color)
 {
 	x+=pansx;
 	y+=pansy;
 	if (VW_MarkUpdateBlock (x,y,x,y))
 		VW_Plot(x,y,color);
 }
+*/
 
-void VWB_Hlin (int x1, int x2, int y, int color)
+void VWB_Hlin (short x1, short x2, short y, short color)
 {
 	x1+=pansx;
 	x2+=pansx;
@@ -1395,7 +1017,7 @@ void VWB_Hlin (int x1, int x2, int y, int color)
 		VW_Hlin(x1,x2,y,color);
 }
 
-void VWB_Vlin (int y1, int y2, int x, int color)
+void VWB_Vlin (short y1, short y2, short x, short color)
 {
 	x+=pansx;
 	y1+=pansy;
