@@ -6,6 +6,8 @@ The release of the source code does not affect the licensing of the game data fi
 
 ## Compiling
 
+This port requires SDL 1.x to compile.  If you're on Linux, use apt-get or whatever package manager you use.  On MacOS, I'd recommend getting SDL through brew (brew install sdl).  Once you got your dependencies sorted, run make from the command line.
+
 make [enter]
 
 The code was converted from the original code targeting Borland C++ 2.0, to modern C++ compilers.  The code has been demonstrated to compile and work on Windows using Visual Studio 2013, Linux using Ubuntu and MacOS High Sierra.
