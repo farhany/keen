@@ -2,6 +2,43 @@ cmake_minimum_required(VERSION 2.6)
 
 project(kdreams)
 
+# --- bin2c ---
+
+add_executable(bin2c "tools/bin2c.cpp")
+
+# --- auto-generated header and source files from game assets ---
+
+set(static_list
+	static/AUDIODCT.KDR static/AUDIODCT audiodict
+	static/AUDIOHHD.KDR static/AUDIOHHD audiohead
+	static/CONTEXT.KDR static/CONTEXT context
+	static/EGADICT.KDR static/EGADICT EGAdict
+	static/EGAHEAD.KDR static/EGAHEAD EGAhead
+	static/GAMETEXT.KDR static/GAMETEXT gametext
+	static/MAPDICT.KDR static/MAPDICT mapdict
+	static/MAPHEAD.KDR static/MAPHEAD maphead
+	static/STORY.KDR static/STORY story)
+
+list(LENGTH static_list static_count)
+math(EXPR static_count "${static_count} / 3 - 1")
+
+foreach(val RANGE ${static_count})
+	math(EXPR source_index "${val} * 3 + 0")
+	math(EXPR prefix_index "${val} * 3 + 1")
+	math(EXPR symbol_index "${val} * 3 + 2")
+
+	list(GET static_list ${source_index} source)
+	list(GET static_list ${prefix_index} prefix)
+	list(GET static_list ${symbol_index} symbol)
+	message(STATUS "adding bin2c build step: ${source} ${prefix} ${symbol}")
+
+	add_custom_command(
+		OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/${prefix}.c ${CMAKE_CURRENT_SOURCE_DIR}/${prefix}.h
+		COMMAND bin2c ${source} ${prefix} ${symbol}
+		DEPENDS bin2c ${source}
+		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+endforeach()
+
 # --- kdreams ---
 
 set(source
