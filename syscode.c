@@ -115,7 +115,7 @@ static int s_useOpengl = 0;
 
 //
 
-static int __cdecl TimeThread(void * userData)
+static int SDLCALL TimeThread(void * userData)
 {
 	while (true)
 	{

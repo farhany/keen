@@ -92,3 +92,6 @@ target_include_directories(kdreams PRIVATE ${SDL_INCLUDE_DIR})
 target_link_libraries(kdreams ${OPENGL_LIBRARIES})
 target_link_libraries(kdreams ${SDL_LIBRARY})
 
+if (UNIX)
+    target_link_libraries(kdreams m)
+endif (UNIX)
