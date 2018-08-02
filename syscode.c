@@ -24,6 +24,14 @@
 	#define PROFILING 0 // not supported
 #endif
 
+#if defined(_MSC_VER) && (_MSC_VER >= 1900)
+	// the SDL library was built using an earlier version of Visual C++,
+	// to avoid undefined references we need to patch things a bit
+	#pragma comment(lib, "legacy_stdio_definitions.lib")
+	FILE * __cdecl __iob_func(void) { return stdin; }
+#endif
+
+
 extern void SDL_SoundFinished();
 static void SYS_PollJoy();
 
