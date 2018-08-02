@@ -75,6 +75,10 @@ set(source
 	stubs.c
 	syscode.c)
 
+if (WIN32)
+	list(APPEND source syscode_xinput.c)
+endif (WIN32)
+
 file(GLOB_RECURSE header "*.h")
 
 source_group("sources" FILES ${source})
@@ -84,7 +88,14 @@ add_executable(kdreams ${source} ${header})
 
 include(FindPkgConfig)
 find_package(OpenGL REQUIRED)
-find_package(SDL REQUIRED)
+
+if (WIN32)
+	set(SDL_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/win32/include/SDL)
+	set(SDL_LIBRARY ${PROJECT_SOURCE_DIR}/win32/lib/SDL.lib ${PROJECT_SOURCE_DIR}/win32/lib/SDLmain.lib ${PROJECT_SOURCE_DIR}/win32/lib/Xinput9_1_0.lib)
+	target_compile_definitions(kdreams PRIVATE _CRT_SECURE_NO_DEPRECATE)
+else (WIN32)
+	find_package(SDL REQUIRED)
+endif (WIN32)
 
 target_include_directories(kdreams PRIVATE "${PROJECT_SOURCE_DIR}")
 target_include_directories(kdreams PRIVATE ${SDL_INCLUDE_DIR})
