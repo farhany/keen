@@ -18,9 +18,9 @@
 
 // KD_DEF.H
 
-#include "ID_HEADS.H"
-#include "SOFT.H"
-#include "SL_FILE.H"
+#include "id_heads.h"
+#include "soft.h"
+#include "sl_file.h"
 
 #define FRILLS	0			// Cut out frills for 360K - MIKE MAYNARD
 
@@ -364,4 +364,4 @@ byte bio_readch(BufferedIO *bio);
 void bio_fillbuffer(BufferedIO *bio);
 void SwapLong(int32_t far *Var);
 void SwapWord(unsigned short far *Var);
-void MoveGfxDst(short x, short y);
+void MoveGfxDst(short x, short y);

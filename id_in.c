@@ -35,7 +35,7 @@
 //	DEBUG - there are more globals
 //
 
-#include "ID_HEADS.H"
+#include "id_heads.h"
 #include "syscode.h"
 #pragma	hdrstop
 

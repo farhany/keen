@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include "KD_DEF.H"
+#include "kd_def.h"
 #include "syscode.h"
 
 #define BIO_BUFFER_LEN	(512)
