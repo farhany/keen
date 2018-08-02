@@ -45,7 +45,7 @@
 
 // DEBUG - handle LPT3 for Sound Source
 
-#include "ID_HEADS.H"
+#include "id_heads.h"
 #include "static/CONTEXT.h"
 #include "static/GAMETEXT.h"
 #include "static/STORY.h"
@@ -526,7 +526,7 @@ US_TextScreen(void)
 #define	scr_rowcol(y,x)	{sx = (x) - 1;sy = (y) - 1;}
 #define	scr_aputs(s,a)	USL_ScreenDraw(sx,sy,(s),(a))
 #ifdef WIN32
-	#include "ID_US_S.c"
+	#include "id_us_s.c"
 #endif
 #undef	scr_rowcol
 #undef	scr_aputs

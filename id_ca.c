@@ -30,7 +30,7 @@ loaded into the data segment
 =============================================================================
 */
 
-#include "ID_HEADS.H"
+#include "id_heads.h"
 #include "static/AUDIODCT.h"
 #include "static/AUDIOHHD.h"
 #include "static/EGADICT.h"
