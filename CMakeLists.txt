@@ -106,3 +106,13 @@ target_link_libraries(kdreams ${SDL_LIBRARY})
 if (UNIX)
     target_link_libraries(kdreams m)
 endif (UNIX)
+
+if (WIN32)
+	set_target_properties(kdreams PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/game")
+
+	file(COPY ${CMAKE_SOURCE_DIR}/win32/dll/SDL.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug/)
+	file(COPY ${CMAKE_SOURCE_DIR}/win32/dll/XInput9_1_0.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug/)
+
+	file(COPY ${CMAKE_SOURCE_DIR}/win32/dll/SDL.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
+	file(COPY ${CMAKE_SOURCE_DIR}/win32/dll/XInput9_1_0.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
+endif (WIN32)
