@@ -16,6 +16,10 @@
 	#include "opl/fmopl.h"
 #endif
 
+#ifndef WIN32
+	#include <unistd.h>
+#endif
+
 #define MAX_SOUNDS 64
 
 #ifdef WIN32
@@ -127,7 +131,13 @@ static int SDLCALL TimeThread(void * userData)
 {
 	while (true)
 	{
-		SDL_Delay(1000/s_tickrate); // increment at 70Hz, based on this loc: "if (TimeCount - time > 35)	// Half-second delays"
+		// increment at 70Hz, based on this loc: "if (TimeCount - time > 35)	// Half-second delays"
+		
+	#ifndef WIN32
+		usleep(1000000/s_tickrate);
+	#else
+		SDL_Delay(1000/s_tickrate);
+	#endif
 		TimeCount++;
 	}
 	return 0;
