@@ -358,7 +358,8 @@ void SYS_Init(int tickrate, int displaySx, int displaySy, int fullscreen, int fi
 	if (useOpengl)
 	{
 		SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-
+		SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, 1);
+		
 		if ((s_screen = SDL_SetVideoMode(displaySx, displaySy, 32, SDL_OPENGL | (fullscreen ? SDL_FULLSCREEN : 0))) == 0)
 			Quit("Failed to set video mode");
 
@@ -711,14 +712,20 @@ struct
 	SDLKey src;
 } s_keyTranslations[] =
 {
-	{ 1, SDLK_ESCAPE },
-	{ 28, SDLK_RETURN },
-	{ 29, SDLK_z },
-	{ 56, SDLK_x },
-	{ 72, SDLK_UP },
-	{ 75, SDLK_LEFT },
-	{ 77, SDLK_RIGHT },
-	{ 80, SDLK_DOWN }
+	{ sc_Escape, SDLK_ESCAPE },
+	{ sc_Return, SDLK_RETURN },
+	{ sc_Space, SDLK_SPACE },
+#if defined(__APPLE__) // on Macos pressing CONTROL + up summon 'Mission Control'
+	{ sc_Control, SDLK_z },
+	{ sc_Alt, SDLK_x },
+#else
+	{ sc_Control, SDLK_LCTRL },
+	{ sc_Alt, SDLK_LALT },
+#endif
+	{ sc_UpArrow, SDLK_UP },
+	{ sc_LeftArrow, SDLK_LEFT },
+	{ sc_RightArrow, SDLK_RIGHT },
+	{ sc_DownArrow, SDLK_DOWN }
 };
 
 void SYS_Update()
@@ -734,11 +741,9 @@ void SYS_Update()
 			int key = e.key.keysym.scancode;
 			int i;
 			
-		#ifndef WIN32
 			for (i = 0; i < sizeof(s_keyTranslations) / sizeof(s_keyTranslations[0]); ++i)
 				if (s_keyTranslations[i].src == e.key.keysym.sym)
 					key = s_keyTranslations[i].dst;
-		#endif
 
 			if (key < NumCodes)
 			{
