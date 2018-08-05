@@ -110,9 +110,12 @@ endif (UNIX)
 if (WIN32)
 	set_target_properties(kdreams PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/game")
 
-	file(COPY ${CMAKE_SOURCE_DIR}/win32/dll/SDL.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug/)
-	file(COPY ${CMAKE_SOURCE_DIR}/win32/dll/XInput9_1_0.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug/)
-
-	file(COPY ${CMAKE_SOURCE_DIR}/win32/dll/SDL.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
-	file(COPY ${CMAKE_SOURCE_DIR}/win32/dll/XInput9_1_0.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
+	add_custom_command(TARGET kdreams POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different
+			"${CMAKE_SOURCE_DIR}/win32/dll/SDL.dll"
+			$<TARGET_FILE_DIR:kdreams>)
+	add_custom_command(TARGET kdreams POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different
+			"${CMAKE_SOURCE_DIR}/win32/dll/XInput9_1_0.dll"
+			$<TARGET_FILE_DIR:kdreams>)
 endif (WIN32)
