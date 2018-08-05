@@ -347,9 +347,11 @@ void SYS_Init(int tickrate, int displaySx, int displaySy, int fullscreen, int fi
 		Quit("Failed to initialize SDL");
 
 	SDL_WM_SetCaption("Keen Dreams", NULL);
-#ifndef _DEBUG
+#ifdef NDEBUG
 	SDL_ShowCursor(false);
 	SDL_WM_GrabInput(SDL_GRAB_ON);
+#else
+	#warning "Disabling mouse cursor grabbing due to compiling a debug build. This makes the debugging experience more pleasant, but results in slightly different behavior in release versus debug builds!"
 #endif
 
 	s_mutex = SDL_CreateMutex();
