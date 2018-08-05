@@ -712,9 +712,11 @@ struct
 	SDLKey src;
 } s_keyTranslations[] =
 {
-	{ sc_Escape, SDLK_ESCAPE },
 	{ sc_Return, SDLK_RETURN },
+	{ sc_Escape, SDLK_ESCAPE },
 	{ sc_Space, SDLK_SPACE },
+	{ sc_BackSpace, SDLK_BACKSPACE },
+	{ sc_Tab, SDLK_TAB },
 #if defined(__APPLE__) // on Macos pressing CONTROL + up summon 'Mission Control'
 	{ sc_Control, SDLK_z },
 	{ sc_Alt, SDLK_x },
@@ -722,10 +724,57 @@ struct
 	{ sc_Control, SDLK_LCTRL },
 	{ sc_Alt, SDLK_LALT },
 #endif
+	{ sc_CapsLock, SDLK_CAPSLOCK },
+	{ sc_LShift, SDLK_LSHIFT },
+	{ sc_RShift, SDLK_RSHIFT },
 	{ sc_UpArrow, SDLK_UP },
 	{ sc_LeftArrow, SDLK_LEFT },
 	{ sc_RightArrow, SDLK_RIGHT },
-	{ sc_DownArrow, SDLK_DOWN }
+	{ sc_DownArrow, SDLK_DOWN },
+	{ sc_Insert, SDLK_INSERT },
+	{ sc_Delete, SDLK_DELETE },
+	{ sc_Home, SDLK_HOME },
+	{ sc_End, SDLK_END },
+	{ sc_PgUp, SDLK_PAGEUP },
+	{ sc_PgDn, SDLK_PAGEDOWN },
+	{ sc_F1, SDLK_F1 },
+	{ sc_F2, SDLK_F2 },
+	{ sc_F3, SDLK_F3 },
+	{ sc_F4, SDLK_F4 },
+	{ sc_F5, SDLK_F5 },
+	{ sc_F6, SDLK_F6 },
+	{ sc_F7, SDLK_F7 },
+	{ sc_F8, SDLK_F8 },
+	{ sc_F9, SDLK_F9 },
+	{ sc_F10, SDLK_F10 },
+	{ sc_F11, SDLK_F11 },
+	{ sc_F12, SDLK_F12 },
+	{ sc_A, SDLK_a },
+	{ sc_B, SDLK_b },
+	{ sc_C, SDLK_c },
+	{ sc_D, SDLK_d },
+	{ sc_E, SDLK_e },
+	{ sc_F, SDLK_f },
+	{ sc_G, SDLK_g },
+	{ sc_H, SDLK_h },
+	{ sc_I, SDLK_i },
+	{ sc_J, SDLK_j },
+	{ sc_K, SDLK_k },
+	{ sc_L, SDLK_l },
+	{ sc_M, SDLK_m },
+	{ sc_N, SDLK_n },
+	{ sc_O, SDLK_o },
+	{ sc_P, SDLK_p },
+	{ sc_Q, SDLK_q },
+	{ sc_R, SDLK_r },
+	{ sc_S, SDLK_s },
+	{ sc_T, SDLK_t },
+	{ sc_U, SDLK_u },
+	{ sc_V, SDLK_v },
+	{ sc_W, SDLK_w },
+	{ sc_X, SDLK_x },
+	{ sc_Y, SDLK_y },
+	{ sc_Z, SDLK_z }
 };
 
 void SYS_Update()
@@ -742,8 +791,13 @@ void SYS_Update()
 			int i;
 			
 			for (i = 0; i < sizeof(s_keyTranslations) / sizeof(s_keyTranslations[0]); ++i)
+			{
 				if (s_keyTranslations[i].src == e.key.keysym.sym)
+				{
 					key = s_keyTranslations[i].dst;
+					break;
+				}
+			}
 
 			if (key < NumCodes)
 			{
