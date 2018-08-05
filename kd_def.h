@@ -24,6 +24,8 @@
 
 #define FRILLS	0			// Cut out frills for 360K - MIKE MAYNARD
 
+#define SAVELOAD_FIX 1
+
 
 /*
 =============================================================================
@@ -364,4 +366,4 @@ byte bio_readch(BufferedIO *bio);
 void bio_fillbuffer(BufferedIO *bio);
 void SwapLong(int32_t far *Var);
 void SwapWord(unsigned short far *Var);
-void MoveGfxDst(short x, short y);
+void MoveGfxDst(short x, short y);
