@@ -1,3 +1,6 @@
+[![Patreon](https://cloud.githubusercontent.com/assets/8225057/5990484/70413560-a9ab-11e4-8942-1a63607c0b00.png)](https://www.patreon.com/marcelsmit)
+<br>:heart:
+
 # Commander Keen in Keen Dreams
 
 This repository contains the source for Commander Keen in Keen Dreams.  It is released under the GNU GPLv2+.  See LICENSE for more details.
@@ -6,13 +9,11 @@ The release of the source code does not affect the licensing of the game data fi
 
 ## Compiling
 
-This port requires SDL 1.x to compile.  If you're on Linux, use apt-get or whatever package manager you use.  On MacOS, I'd recommend getting SDL through brew (brew install sdl).  Once you got your dependencies sorted, run make from the command line.
-
-make [enter]
+This port requires SDL 1.x to compile.  If you're on Linux, use apt-get or whatever package manager you use.  On MacOS, I'd recommend getting SDL through brew (brew install sdl).  Once you got your dependencies sorted, run cmake to generate a makefile or project files for your favorite IDE.
 
 The code was converted from the original code targeting Borland C++ 2.0, to modern C++ compilers.  The code has been demonstrated to compile and work on Windows using Visual Studio 2013, Linux using Ubuntu and MacOS High Sierra.
 
-There is some data that must be compiled into the binary.  This data is located in the static directory.  The makefile provided will automatically take care of this.  Just run 'make data' or 'make' [enter].
+There is some data that must be compiled into the binary.  This data is located in the static directory.  The CMake file provided will automatically take care of this through a custom pre-build step.
 
 ## Running
 
