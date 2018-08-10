@@ -349,7 +349,7 @@ void SYS_Init(int tickrate, int displaySx, int displaySy, int fullscreen, int fi
 {
 	int i, plane;
 
-	if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
+	if (SDL_Init(SDL_INIT_EVERYTHING & (~SDL_INIT_TIMER)) < 0)
 		Quit("Failed to initialize SDL");
 
 	SDL_WM_SetCaption("Keen Dreams", NULL);
