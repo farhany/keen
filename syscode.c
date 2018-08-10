@@ -720,8 +720,7 @@ void SYS_Present()
 	
 	SDL_LockMutex(s_timeMutex);
 	static longword s_lastTime = 0;
-	while (TimeCount == s_lastTime) { }
-		SDL_CondWait(s_timeCond, s_timeMutex);
+	SDL_CondWait(s_timeCond, s_timeMutex);
 	s_lastTime = TimeCount;
 	SDL_UnlockMutex(s_timeMutex);
 	
