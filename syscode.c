@@ -118,6 +118,8 @@ static SDL_mutex * s_mutex = 0;
 static SDL_Surface * s_screen = 0;
 static SDL_Joystick * s_joy = 0;
 static SDL_Thread * s_timeThread = 0;
+static SDL_mutex * s_timeMutex = 0;
+static SDL_cond * s_timeCond = 0;
 static SDL_AudioSpec s_audioSpec;
 static void * s_adlibChip = 0;
 static int s_tickrate = 0;
@@ -138,7 +140,11 @@ static int SDLCALL TimeThread(void * userData)
 	#else
 		SDL_Delay(1000/s_tickrate);
 	#endif
+		
+		SDL_LockMutex(s_timeMutex);
 		TimeCount++;
+		SDL_CondSignal(s_timeCond);
+		SDL_UnlockMutex(s_timeMutex);
 	}
 	return 0;
 }
@@ -395,6 +401,9 @@ void SYS_Init(int tickrate, int displaySx, int displaySy, int fullscreen, int fi
 		s_joy = SDL_JoystickOpen(0);
 
 	s_tickrate = tickrate;
+	
+	s_timeMutex = SDL_CreateMutex();
+	s_timeCond = SDL_CreateCond();
 
 	if ((s_timeThread = SDL_CreateThread(TimeThread, 0)) == 0)
 		Quit("Failed to create timer thread");
@@ -708,7 +717,14 @@ void SYS_Present()
 		SYS_Present_OpenGL();
 	else
 		SYS_Present_Software();
-
+	
+	SDL_LockMutex(s_timeMutex);
+	static longword s_lastTime = 0;
+	while (TimeCount == s_lastTime) { }
+		SDL_CondWait(s_timeCond, s_timeMutex);
+	s_lastTime = TimeCount;
+	SDL_UnlockMutex(s_timeMutex);
+	
 	SYS_Update(); // called here, for convenient in draw loops, so we don't have to add it separately
 }
 
@@ -790,7 +806,31 @@ struct
 	{ sc_W, SDLK_w },
 	{ sc_X, SDLK_x },
 	{ sc_Y, SDLK_y },
-	{ sc_Z, SDLK_z }
+	{ sc_Z, SDLK_z },
+#if 0
+	{ '0', SDLK_0 },
+	{ '1', SDLK_1 },
+	{ '2', SDLK_2 },
+	{ '3', SDLK_3 },
+	{ '4', SDLK_4 },
+	{ '5', SDLK_5 },
+	{ '6', SDLK_6 },
+	{ '7', SDLK_7 },
+	{ '8', SDLK_8 },
+	{ '9', SDLK_9 },
+	{ '-', SDLK_MINUS },
+	{ '+', SDLK_PLUS },
+	{ '?', SDLK_QUESTION },
+	{ '[', SDLK_LEFTBRACKET },
+	{ ']', SDLK_RIGHTBRACKET },
+	{ '|', SDLK_COLON },
+	{ ';', SDLK_SEMICOLON },
+	{ '\\', SDLK_BACKSLASH },
+	{ ',', SDLK_COMMA },
+	{ '.', SDLK_PERIOD },
+	{ '.', SDLK_PERIOD },
+	{ '/', SDLK_SLASH }
+#endif
 };
 
 void SYS_Update()
@@ -803,7 +843,7 @@ void SYS_Update()
 	{
 		if (e.type == SDL_KEYDOWN || e.type == SDL_KEYUP)
 		{
-			int key = e.key.keysym.scancode;
+			int key = key_None;
 			int i;
 			
 			for (i = 0; i < sizeof(s_keyTranslations) / sizeof(s_keyTranslations[0]); ++i)
@@ -815,7 +855,7 @@ void SYS_Update()
 				}
 			}
 
-			if (key < NumCodes)
+			if (key != key_None)
 			{
 				if (e.type == SDL_KEYUP)
 					key |= 0x80;
